@@ -722,6 +722,313 @@ class FactoredIChingHMM:
 
 
 
+# ============================================================================
+# 规则驱动易经 HMM — 爻变转移(确定) + 卦象→天气发射(学习)
+# ============================================================================
+
+# 五行元素分配
+WUXING_ELEMENT = ["金","土","木","木","水","火","土","金"]  # 乾坤震巽坎离艮兑
+WUXING_SHENG = {("木","火"),("火","土"),("土","金"),("金","水"),("水","木")}
+WUXING_KE   = {("木","土"),("土","水"),("水","火"),("火","金"),("金","木")}
+
+
+def build_rule_transition(self_prob=0.30, d1_prob=0.08, d2_prob=0.03, sheng_boost=1.5):
+    """
+    根据易经爻变规则构建确定性的64×64转移矩阵。
+    
+    转移权重基于:
+      1. Hamming距离 (爻变数): 自稳 > 1爻变 > 2爻变 > ...
+      2. 五行生克: 上/下卦五行相生时提升概率
+    """
+    T = np.zeros((N_HEXAGRAMS, N_HEXAGRAMS))
+    
+    for h in range(N_HEXAGRAMS):
+        h_bin = HEX_BIN[h]
+        u, l = HEX_TO_TRIGRAMS[h]
+        
+        for h2 in range(N_HEXAGRAMS):
+            h2_bin = HEX_BIN[h2]
+            d = bin(h_bin ^ h2_bin).count('1')
+            
+            if d == 0:    w = self_prob
+            elif d == 1:  w = d1_prob
+            elif d == 2:  w = d2_prob
+            elif d == 3:  w = d2_prob * 0.3
+            elif d == 6:  w = d1_prob * 0.3  # 错卦 (全变)
+            else:         w = 0.001
+            
+            # 五行生克调制
+            u2, l2 = HEX_TO_TRIGRAMS[h2]
+            eu, eu2 = WUXING_ELEMENT[u], WUXING_ELEMENT[u2]
+            el, el2 = WUXING_ELEMENT[l], WUXING_ELEMENT[l2]
+            
+            if (eu, eu2) in WUXING_SHENG: w *= sheng_boost
+            if (el, el2) in WUXING_SHENG: w *= sheng_boost
+            if (eu, eu2) in WUXING_KE:    w *= (2 - sheng_boost)
+            if (el, el2) in WUXING_KE:    w *= (2 - sheng_boost)
+            
+            T[h, h2] = max(w, 1e-6)
+    
+    T /= T.sum(axis=1, keepdims=True)
+    return T
+
+
+class RuleDrivenHMM:
+    """
+    规则驱动易经隐马尔可夫模型。
+    
+    转移矩阵: 从易经爻变+五行规则构建 (固定, 不学习)
+    发射矩阵: 64×8 Dirichlet (学习: 卦象→天气的映射)
+    
+    理念: 易经提供了"变化法则", 贝叶斯更新学习"法则如何显化为观测".
+    """
+    
+    def __init__(self, hex_affinities, emit_strength=3.0, 
+                 self_prob=0.30, d1_prob=0.08):
+        self.nh = N_HEXAGRAMS; self.nw = N_WEATHER
+        
+        # 固定转移矩阵 (不学习)
+        self.transition = build_rule_transition(self_prob, d1_prob)
+        
+        # 可学习的发射矩阵
+        self.emit_alpha = np.zeros((self.nh, self.nw))
+        for h in range(self.nh):
+            self.emit_alpha[h, :] = emit_strength * hex_affinities[h, :] + 1.0
+        self.prior_emit = self.emit_alpha.copy()
+        
+        self.belief = np.ones(self.nh) / self.nh
+        self.belief_history = []  # for debugging
+    
+    def forward_filter(self, observed):
+        """Forward 滤波: 固定转移 + 学习到的发射."""
+        emit_p = self.emit_alpha[:, observed] / self.emit_alpha.sum(axis=1)
+        pred_belief = self.belief @ self.transition
+        new_belief = emit_p * pred_belief
+        s = new_belief.sum()
+        if s > 1e-12:
+            self.belief = new_belief / s
+        else:
+            self.belief = np.ones(self.nh) / self.nh
+    
+    def predict(self, history):
+        if len(history) == 0:
+            return np.ones(self.nw) / self.nw
+        
+        emit_p = self.emit_alpha / self.emit_alpha.sum(axis=1, keepdims=True)
+        next_belief = self.belief @ self.transition
+        pred = next_belief @ emit_p
+        return pred / pred.sum()
+    
+    def update(self, history, observed, lr=1.0):
+        """只更新发射矩阵, 转移矩阵保持不变."""
+        if len(history) == 0:
+            return
+        
+        old_belief = self.belief.copy()
+        self.emit_alpha[:, observed] += lr * old_belief
+        self.forward_filter(observed)
+    
+    def belief_entropy(self):
+        """当前belief的熵 (衡量推理确定性)."""
+        b = np.clip(self.belief, 1e-12, 1.0)
+        return -np.sum(b * np.log(b))
+    
+    def param_count(self):
+        return self.nh * self.nw  # only emission is learned
+
+
+
+# ============================================================================
+# 八卦 HMM — 8 态隐马尔可夫, 观测=隐状态维度 (信息瓶颈消除)
+# ============================================================================
+
+class TrigramHMM:
+    """
+    八卦隐马尔可夫模型: 8 个三爻卦作为隐状态。
+    
+    转移矩阵: 8×8 (64参数, 五行规则先验 + 数据学习)
+    发射矩阵: 8×8 (64参数, 卦象→天气映射, 学习)
+    
+    关键: 8 态隐空间 + 8 类观测 → 信息瓶颈消除.
+    """
+    
+    def __init__(self, trigram_affinities, trans_strength=5.0, emit_strength=3.0):
+        self.nt = 8; self.nw = 8
+        
+        # 转移矩阵: 五行规则先验
+        self.trans_alpha = np.full((8,8), 1.0)
+        for t in range(8):
+            self.trans_alpha[t, t] = 1.0 + trans_strength * 0.40  # 自稳
+        sheng = [(3,5),(2,5),(5,1),(5,6),(1,0),(6,0),(0,4),(7,4),(4,3),(4,2)]
+        for a, b in sheng:
+            self.trans_alpha[a, b] += trans_strength * 0.06
+        ke = [(3,1),(1,4),(4,5),(5,0),(0,3),(6,4),(4,5),(5,7),(7,3),(2,6)]  # simplified
+        for a, b in [(3,1),(1,4),(4,5),(5,0),(0,3)]:
+            self.trans_alpha[a,b] += trans_strength * 0.02
+        
+        # 发射矩阵: 三爻天气先验
+        self.emit_alpha = np.zeros((self.nt, self.nw))
+        for t in range(self.nt):
+            self.emit_alpha[t,:] = emit_strength * trigram_affinities[t,:] + 1.0
+        
+        self.belief = np.ones(self.nt) / self.nt
+    
+    def forward_filter(self, observed):
+        emit_p = self.emit_alpha[:, observed] / self.emit_alpha.sum(axis=1)
+        trans_p = self.trans_alpha / self.trans_alpha.sum(axis=1, keepdims=True)
+        pred = self.belief @ trans_p
+        new_b = emit_p * pred
+        s = new_b.sum()
+        self.belief = new_b / s if s > 1e-12 else np.ones(self.nt)/self.nt
+    
+    def predict(self, history):
+        if len(history) == 0:
+            return np.ones(self.nw) / self.nw
+        trans_p = self.trans_alpha / self.trans_alpha.sum(axis=1, keepdims=True)
+        emit_p = self.emit_alpha / self.emit_alpha.sum(axis=1, keepdims=True)
+        next_b = self.belief @ trans_p
+        return (next_b @ emit_p)
+    
+    def update(self, history, observed, lr_tr=0.2, lr_em=1.0):
+        if len(history) == 0: return
+        old = self.belief.copy()
+        self.emit_alpha[:, observed] += lr_em * old
+        self.forward_filter(observed)
+        tr_update = lr_tr * np.outer(old, self.belief)
+        self.trans_alpha += tr_update
+    
+    def param_count(self):
+        return self.nt * self.nt + self.nt * self.nw
+
+
+
+# ============================================================================
+# 符号-贝叶斯双引擎模型 — 符号层做"观象→求变→玩辞", 贝叶斯层校准发射
+# ============================================================================
+
+class SymbolicBayesianModel:
+    """
+    符号-贝叶斯双引擎模型。
+    
+    符号引擎 (确定性, 不学习):
+      观象: 给定天气 → 找到匹配的卦象 (发射先验)
+      求变: 对于匹配卦象 → 计算爻变可达的变卦
+      玩辞: 变卦 → 预测天气分布 (发射后验)
+    
+    贝叶斯引擎 (学习):
+      用真实观测更新发射矩阵, 使"观象"越来越准。
+    
+    与纯HMM的关键区别: 符号引擎主动修剪状态空间,
+    每步只在 ~8 个卦象上推理, 而非全 64 个。
+    """
+    
+    def __init__(self, hex_affinities, emit_strength=3.0, top_k=8):
+        self.nh = N_HEXAGRAMS; self.nw = N_WEATHER; self.top_k = top_k
+        
+        # 可学习的发射矩阵 (仅此被更新)
+        self.emit_alpha = np.zeros((self.nh, self.nw))
+        for h in range(self.nh):
+            self.emit_alpha[h, :] = emit_strength * hex_affinities[h, :] + 1.0
+        
+        # 预计算爻变邻域: 每个卦象的 1-yao-change 邻居
+        self.yao_neighbors = self._build_yao_neighbors()
+        
+        # 信念: 当前卦象分布
+        self.belief = np.ones(self.nh) / self.nh
+    
+    def _build_yao_neighbors(self):
+        """预计算每个卦象的 1爻变邻居列表."""
+        neighbors = []
+        for h in range(N_HEXAGRAMS):
+            h_bin = HEX_BIN[h]
+            neigh = []
+            for h2 in range(N_HEXAGRAMS):
+                if h == h2: continue
+                if bin(HEX_BIN[h2] ^ h_bin).count('1') == 1:
+                    neigh.append(h2)
+            neighbors.append(neigh)
+        return neighbors
+    
+    def _symbolic_observe(self, observed):
+        """
+        符号引擎: 观象 — 找到与当前天气最匹配的卦象。
+        使用发射先验计算匹配度。
+        """
+        emit_p = self.emit_alpha[:, observed] / self.emit_alpha.sum(axis=1)
+        # 选 top_k 最匹配的卦象
+        top = np.argsort(emit_p)[-self.top_k:]
+        return top
+    
+    def _symbolic_transform(self, observed_hexes):
+        """
+        符号引擎: 求变 — 对每个匹配卦象, 计算可达的变卦。
+        可达 = 自身 + 1爻变邻居 + 错卦。
+        """
+        reachable = set()
+        for h in observed_hexes:
+            reachable.add(h)  # 自稳
+            reachable.update(self.yao_neighbors[h])  # 1爻变
+            reachable.add(CUO_GUA[h])  # 错卦
+        return np.array(sorted(reachable))
+    
+    def _symbolic_predict(self, observed, current_hexes, next_hexes):
+        """
+        符号引擎: 玩辞 — 从变卦的发射后验预测天气分布。
+        
+        信念流动: current_hexes → (爻变) → next_hexes → 发射 → 天气
+        """
+        emit_p = self.emit_alpha / self.emit_alpha.sum(axis=1, keepdims=True)
+        
+        # 当前卦象的信念 (归一化到 current_hexes)
+        curr_belief = np.zeros(self.nh)
+        curr_belief[current_hexes] = self.belief[current_hexes]
+        s = curr_belief.sum()
+        if s > 1e-12: curr_belief /= s
+        
+        # 爻变转移: curr → next (均匀分配到可达变卦)
+        next_belief = np.zeros(self.nh)
+        for h in current_hexes:
+            if curr_belief[h] < 1e-8: continue
+            targets = [h] + self.yao_neighbors[h] + [CUO_GUA[h]]
+            targets = [t for t in targets if t in next_hexes]
+            if not targets: continue
+            per_target = curr_belief[h] / len(targets)
+            for t in targets:
+                next_belief[t] += per_target
+        
+        # 从变卦发射到天气
+        pred = next_belief[next_hexes] @ emit_p[next_hexes]
+        return pred / pred.sum()
+    
+    def predict(self, history):
+        if len(history) == 0:
+            return np.ones(self.nw) / self.nw
+        
+        observed = history[-1]
+        current = self._symbolic_observe(observed)
+        next_h = self._symbolic_transform(current)
+        return self._symbolic_predict(observed, current, next_h)
+    
+    def update(self, history, observed, lr=1.0):
+        if len(history) == 0: return
+        
+        wp = history[-1] if len(history) >= 1 else observed
+        current = self._symbolic_observe(wp)
+        
+        # 贝叶斯更新: 增强匹配卦象的发射概率
+        self.emit_alpha[current, observed] += lr
+        
+        # 更新信念: 匹配卦象的信念提升
+        emit_p = self.emit_alpha[:, observed] / self.emit_alpha.sum(axis=1)
+        self.belief *= emit_p
+        s = self.belief.sum()
+        if s > 1e-12: self.belief /= s
+    
+    def param_count(self):
+        return self.nh * self.nw
+
+
+
 
 # ============================================================================
 # 对照组模型

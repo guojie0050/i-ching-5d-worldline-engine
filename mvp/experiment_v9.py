@@ -18,7 +18,7 @@ import json, urllib.request, os, csv, warnings
 warnings.filterwarnings("ignore")
 
 from model import (
-    IChingHMM, FactoredIChingHMM, TrigramBayesianModel, NeuralNetModel,
+    SymbolicBayesianModel, TrigramBayesianModel, NeuralNetModel,
     TRIGRAM_WEATHER, HEXAGRAM_AFFINITIES, N_WEATHER, WEATHER_TYPES,
 )
 
@@ -46,15 +46,14 @@ def to_seq(data):
 # 实验
 # ============================================================================
 
-LABELS = ["HMM-Factored","HMM-Full","Trigram","Neural-Net"]
+LABELS = ["Symbolic-Bayes","Trigram-V4","Neural-Net"]
 SIZES, EVAL_W = [100,200,500,1000,2000,3000], 365
 SEEDS = [42,123,456,789,1011]
 PS, TS, ES = 1.0, 10.0, 3.0  # prior_strength, trans_strength, emit_strength
 
 def make_models(seed):
     return [
-        FactoredIChingHMM(HEXAGRAM_AFFINITIES, trans_strength=TS, emit_strength=ES),
-        IChingHMM(HEXAGRAM_AFFINITIES, trans_strength=TS, emit_strength=ES),
+        SymbolicBayesianModel(HEXAGRAM_AFFINITIES, emit_strength=ES, top_k=8),
         TrigramBayesianModel(TRIGRAM_WEATHER, PS, 0.5),
         NeuralNetModel(ctx_win=3, hidden=32, lr=0.005, seed=seed),
     ], LABELS
@@ -84,8 +83,8 @@ def run(weather):
     return res
 
 def plot(res):
-    colors = {"HMM-Factored":"#1a5276","HMM-Full":"#8e44ad","Trigram":"#2980b9","Neural-Net":"#e74c3c"}
-    marks = {"HMM-Factored":"o","HMM-Full":"D","Trigram":"s","Neural-Net":"x"}
+    colors = {"Symbolic-Bayes":"#1a5276","Trigram-V4":"#2980b9","Neural-Net":"#e74c3c"}
+    marks = {"Symbolic-Bayes":"o","Trigram-V4":"s","Neural-Net":"x"}
 
     fig, ax = plt.subplots(figsize=(12,6))
     for lb in LABELS:
@@ -141,13 +140,11 @@ def main():
         print(row)
 
     N_k = 100
-    hf = np.mean(results[N_k]["HMM-Factored"])
-    hfull = np.mean(results[N_k]["HMM-Full"])
-    tri = np.mean(results[N_k]["Trigram"])
+    sb = np.mean(results[N_k]["Symbolic-Bayes"])
+    tri = np.mean(results[N_k]["Trigram-V4"])
     nn = np.mean(results[N_k]["Neural-Net"])
-    print(f"\n  @{N_k}天: Factored={hf:.1%}  Full={hfull:.1%}  Trigram={tri:.1%}  NN={nn:.1%}")
-    print(f"  Factored vs Full: Δ={hf-hfull:+.1%}")
-    print(f"  Factored vs Trigram: Δ={hf-tri:+.1%}")
+    print(f"\n  @{N_k}天: Symbolic={sb:.1%}  TrigramV4={tri:.1%}  NN={nn:.1%}")
+    print(f"  Symbolic vs Trigram: Δ={sb-tri:+.1%}")
 
     plot(results)
     save_csv(results)
