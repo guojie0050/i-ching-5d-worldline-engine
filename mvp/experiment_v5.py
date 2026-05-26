@@ -61,7 +61,7 @@ LABELS = [
     "Full-Model", "No-Yao", "No-Delta",
     "Symmetric", "Trigram-V4", "Neural-Net",
 ]
-SIZES = [100, 200, 500, 1000, 2000]
+SIZES = [100, 200, 500, 1000, 2000, 3000]
 EVAL_W = 365
 SEEDS = [42, 123, 456, 789, 1011]
 PS, T = 1.0, 0.5

@@ -90,7 +90,6 @@
 ```
 yijing-bayesian-world-model/
 ├── README.md                  ← 本文件
-├── LETTER.md                  ← 给 DeepSeek 创始人的信
 ├── mvp/
 │   ├── model.py               ← 易经贝叶斯模型核心
 │   ├── experiment.py          ← V3 实验脚本
