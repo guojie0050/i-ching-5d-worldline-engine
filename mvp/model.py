@@ -204,6 +204,114 @@ class IChingBayesianModel:
 
 
 # ============================================================================
+# 三爻共享贝叶斯模型 (Trigram-Level Parameter Sharing)
+# ============================================================================
+
+# Build hex-to-trigram index mapping
+HEX_TO_TRIGRAMS = np.array([(ui, li) for _, _, ui, li in KING_WEN], dtype=int)
+
+
+class TrigramBayesianModel:
+    """
+    三爻共享贝叶斯模型 —— 卦象参数由其上下三爻卦共享。
+
+    每个三爻卦 t 维护独立 8×8 Dirichlet 转移矩阵:
+      卦象 h = (t_u, t_l) 的参数 = (alpha[t_u] + alpha[t_l]) / 2
+
+    8 三爻卦 × 8 × 8 = 512 个 Dirichlet 参数 (减少 87.5%)。
+    共享三爻的卦象自动共享信息 → 小数据效率显著提升。
+
+    先验: alpha[t, wf, :] = prior_strength × trigram_affinity[t, :] + 1.0
+    预测: 同 hexagram 模型 (加权混合)
+    更新: 按贡献分配给上下三爻卦 → alpha[t_u] 和 alpha[t_l] 各得一半更新
+    """
+
+    def __init__(self, trigram_affinities, prior_strength=1.0, temperature=0.5):
+        self.ps = prior_strength
+        self.T = temperature
+        self.nt = 8       # 8 trigrams
+        self.nh = 64       # 64 hexagrams
+        self.nw = 8       # 8 weather types
+
+        # 三爻卦级参数: (8, 8, 8)
+        self.alpha = np.zeros((self.nt, self.nw, self.nw))
+        for t in range(self.nt):
+            for wf in range(self.nw):
+                self.alpha[t, wf, :] = prior_strength * trigram_affinities[t, :] + 1.0
+
+        self.prior_alpha = self.alpha.copy()
+        self.hex_ll = np.zeros(self.nh)
+
+    def _hex_alpha(self, h):
+        """卦象 h 的有效 alpha: 上下三爻卦的均值。"""
+        tu, tl = HEX_TO_TRIGRAMS[h]
+        return (self.alpha[tu] + self.alpha[tl]) / 2.0
+
+    def predict(self, history):
+        if len(history) == 0:
+            return np.ones(self.nw) / self.nw
+
+        wc = history[-1]
+
+        lw = self.hex_ll / max(self.T, 0.01)
+        lw -= lw.max()
+        wts = np.exp(lw)
+        s = wts.sum()
+        wts = wts / s if s > 1e-12 else np.ones(self.nh) / self.nh
+
+        pred = np.zeros(self.nw)
+        for h in range(self.nh):
+            alpha_h = self._hex_alpha(h)
+            p = alpha_h[wc, :] / alpha_h[wc, :].sum()
+            pred += wts[h] * p
+
+        return pred / pred.sum()
+
+    def update(self, history, observed, lr=1.0):
+        if len(history) == 0:
+            return
+
+        wp, wn = history[-1], observed
+
+        # Per-hexagram contribution (same as hexagram model)
+        contrib = np.zeros(self.nh)
+        for h in range(self.nh):
+            alpha_h = self._hex_alpha(h)
+            p = alpha_h[wp, :] / alpha_h[wp, :].sum()
+            contrib[h] = p[wn]
+
+        cs = contrib.sum()
+        contrib = contrib / cs if cs > 1e-12 else np.ones(self.nh) / self.nh
+
+        # Update trigram-level parameters (split contribution to upper/lower)
+        for h in range(self.nh):
+            tu, tl = HEX_TO_TRIGRAMS[h]
+            self.alpha[tu, wp, wn] += lr * contrib[h] * 0.5
+            self.alpha[tl, wp, wn] += lr * contrib[h] * 0.5
+
+        # Update per-hexagram log-likelihood
+        for h in range(self.nh):
+            alpha_h = self._hex_alpha(h)
+            p = alpha_h[wp, :] / alpha_h[wp, :].sum()
+            self.hex_ll[h] += np.log(max(p[wn], 1e-12))
+
+    def entropy(self, history):
+        p = self.predict(history)
+        p = np.clip(p, 1e-12, 1.0)
+        return -np.sum(p * np.log(p))
+
+    def get_mixture_weights(self):
+        lw = self.hex_ll / max(self.T, 0.01)
+        lw -= lw.max()
+        wts = np.exp(lw)
+        return wts / wts.sum()
+
+    def param_count(self):
+        """返回有效参数数量。"""
+        return self.nt * self.nw * self.nw
+
+
+# ============================================================================
 # 对照组模型
 # ============================================================================
 
