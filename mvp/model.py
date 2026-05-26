@@ -37,6 +37,8 @@ TRIGRAM_WEATHER = np.array([
     [0.05, 0.10, 0.08, 0.05, 0.20, 0.04, 0.25, 0.23],  # 兑: 潮湿雾雨
 ])
 
+
+
 # ============================================================================
 # 六十四卦 (64 Hexagrams) — King Wen Sequence
 # ============================================================================
@@ -210,6 +212,41 @@ class IChingBayesianModel:
 # Build hex-to-trigram index mapping
 HEX_TO_TRIGRAMS = np.array([(ui, li) for _, _, ui, li in KING_WEN], dtype=int)
 
+# ============================================================================
+# 六爻编码 (Yao Encoding) — 天气 ↔ 阴阳 ↔ 卦象
+# ============================================================================
+
+# 八卦二进制 (伏羲次序: 乾7→坤0, 上爻=高位)
+TRIGRAM_BIN = np.array([7, 0, 4, 3, 2, 5, 1, 6], dtype=int)
+#                  乾 坤 震 巽 坎 离 艮 兑
+
+# 六十四卦二进制: hex_bin[h] = (上卦bin<<3) | 下卦bin
+HEX_BIN = np.array([
+    (TRIGRAM_BIN[ui] << 3) | TRIGRAM_BIN[li]
+    for _, _, ui, li in KING_WEN
+], dtype=int)
+
+# 二进制→卦象索引 (反向查找表, 0-63)
+BIN_TO_HEX = np.zeros(64, dtype=int)
+for h, b in enumerate(HEX_BIN):
+    BIN_TO_HEX[b] = h
+
+
+def weather_to_yao(w):
+    """天气→阴阳爻: 阳(1)=晴/暑/风, 阴(0)=其他"""
+    return 1 if w in (0, 5, 2) else 0
+
+
+def history_to_hexagram(history):
+    """过去6天天气→6爻模式→卦象索引。不足6天返回None。"""
+    if len(history) < 6:
+        return None
+    recent = history[-6:]
+    yao_pattern = sum(weather_to_yao(w) << i for i, w in enumerate(recent))
+    return BIN_TO_HEX[yao_pattern]
+
+
+
 
 class TrigramBayesianModel:
     """
@@ -309,6 +346,110 @@ class TrigramBayesianModel:
     def param_count(self):
         """返回有效参数数量。"""
         return self.nt * self.nw * self.nw
+
+
+
+# ============================================================================
+# 完整易经世界模型 — 非对称权重 + 层次化delta + 六爻上下文
+# ============================================================================
+
+class HexagramWorldModel:
+    """
+    完整易经世界模型 (V5):
+
+    ① 非对称权重: 上卦/下卦权重因卦而异 (纯卦对称, 混合卦可调)
+    ② 层次化 delta: alpha[h] = shared + delta[h] (群体共享 + 个体偏差)
+    ③ 六爻上下文: 过去6天阴阳模式→匹配卦象→提升权重
+
+    参数量:
+      - alpha: 8×8×8 = 512 (三爻共享)
+      - delta: 64×8×8 = 4096 (卦象个体, L2 正则化约束)
+      - w_upper: 64 (位置权重)
+    """
+
+    def __init__(self, trigram_affinities, prior_strength=1.0, temperature=0.5,
+                 l2_delta=0.05, yao_boost=1.5):
+        self.ps = prior_strength
+        self.T = temperature
+        self.l2 = l2_delta
+        self.yao_boost = yao_boost
+        self.nt = 8; self.nh = 64; self.nw = 8
+
+        self.alpha = np.zeros((self.nt, self.nw, self.nw))
+        for t in range(self.nt):
+            for wf in range(self.nw):
+                self.alpha[t, wf, :] = prior_strength * trigram_affinities[t, :] + 1.0
+
+        self.delta = np.zeros((self.nh, self.nw, self.nw))
+
+        self.w_upper = np.full(self.nh, 0.55)
+        self.w_lower = np.full(self.nh, 0.45)
+        pure_ids = [0, 1, 28, 29, 50, 51, 56, 57]
+        for pid in pure_ids:
+            self.w_upper[pid] = 0.50
+            self.w_lower[pid] = 0.50
+
+        self.hex_ll = np.zeros(self.nh)
+        self.prior_alpha = self.alpha.copy()
+
+    def _hex_alpha(self, h):
+        tu, tl = HEX_TO_TRIGRAMS[h]
+        shared = (self.w_upper[h] * self.alpha[tu] +
+                  self.w_lower[h] * self.alpha[tl])
+        return shared + self.delta[h]
+
+    def _yao_bonus(self, history):
+        matched = history_to_hexagram(history)
+        bonus = np.ones(self.nh)
+        if matched is not None:
+            bonus[matched] = self.yao_boost
+            matched_bin = HEX_BIN[matched]
+            for h in range(self.nh):
+                if bin(HEX_BIN[h] ^ matched_bin).count('1') == 1:
+                    bonus[h] = 1.0 + (self.yao_boost - 1.0) * 0.3
+        return bonus
+
+    def predict(self, history):
+        if len(history) == 0:
+            return np.ones(self.nw) / self.nw
+        wc = history[-1]
+        lw = self.hex_ll / max(self.T, 0.01)
+        lw -= lw.max()
+        wts = np.exp(lw)
+        wts *= self._yao_bonus(history)
+        s = wts.sum()
+        wts = wts / s if s > 1e-12 else np.ones(self.nh) / self.nh
+        pred = np.zeros(self.nw)
+        for h in range(self.nh):
+            alpha_h = self._hex_alpha(h)
+            p = alpha_h[wc, :] / alpha_h[wc, :].sum()
+            pred += wts[h] * p
+        return pred / pred.sum()
+
+    def update(self, history, observed, lr=1.0):
+        if len(history) == 0:
+            return
+        wp, wn = history[-1], observed
+        contrib = np.zeros(self.nh)
+        for h in range(self.nh):
+            alpha_h = self._hex_alpha(h)
+            p = alpha_h[wp, :] / alpha_h[wp, :].sum()
+            contrib[h] = p[wn]
+        cs = contrib.sum()
+        contrib = contrib / cs if cs > 1e-12 else np.ones(self.nh) / self.nh
+        for h in range(self.nh):
+            tu, tl = HEX_TO_TRIGRAMS[h]
+            self.alpha[tu, wp, wn] += lr * contrib[h] * self.w_upper[h]
+            self.alpha[tl, wp, wn] += lr * contrib[h] * self.w_lower[h]
+            self.delta[h, wp, wn] += lr * contrib[h] * 0.1
+            self.delta[h, wp, wn] *= (1.0 - self.l2)
+        for h in range(self.nh):
+            alpha_h = self._hex_alpha(h)
+            p = alpha_h[wp, :] / alpha_h[wp, :].sum()
+            self.hex_ll[h] += np.log(max(p[wn], 1e-12))
+
+    def param_count(self):
+        return self.nt * self.nw * self.nw + self.nh
 
 
 # ============================================================================
