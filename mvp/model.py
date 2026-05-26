@@ -452,6 +452,277 @@ class HexagramWorldModel:
         return self.nt * self.nw * self.nw + self.nh
 
 
+
+# ============================================================================
+# 卦象关系 (Hexagram Relationships) — 序卦传/综卦/错卦
+# ============================================================================
+
+# 综卦: swap upper/lower trigrams. zong_gua[h] = index of inverted hexagram
+ZONG_GUA = np.zeros(N_HEXAGRAMS, dtype=int)
+for h, (_, _, ui, li) in enumerate(KING_WEN):
+    for h2, (_, _, ui2, li2) in enumerate(KING_WEN):
+        if ui == li2 and li == ui2:
+            ZONG_GUA[h] = h2; break
+
+# 错卦: complement each trigram. 乾↔坤, 兑↔艮, 离↔坎, 震↔巽
+CUO_MAP = {7:0, 0:7, 6:1, 1:6, 5:2, 2:5, 4:3, 3:4}  # trigram bin → complement
+TRIGRAM_TO_BIN = {i: TRIGRAM_BIN[i] for i in range(8)}
+BIN_TO_TRIGRAM = {v: k for k, v in TRIGRAM_TO_BIN.items()}
+CUO_GUA = np.zeros(N_HEXAGRAMS, dtype=int)
+for h in range(N_HEXAGRAMS):
+    tb = HEX_BIN[h]
+    upper_bin = tb >> 3
+    lower_bin = tb & 0b111
+    cuo_upper = CUO_MAP[upper_bin]
+    cuo_lower = CUO_MAP[lower_bin]
+    cuo_bin = (cuo_upper << 3) | cuo_lower
+    CUO_GUA[h] = BIN_TO_HEX[cuo_bin]
+
+
+def build_transition_prior(strength=10.0):
+    """
+    构建 64×64 转移先验矩阵 (Dirichlet concentration).
+    基于序卦传关系: 自稳 > 综卦 > 错卦 > 邻卦 > 其他.
+    """
+    T = np.full((N_HEXAGRAMS, N_HEXAGRAMS), 0.1)  # baseline
+    
+    for h in range(N_HEXAGRAMS):
+        T[h, h] = strength * 0.30               # 自稳
+        T[h, ZONG_GUA[h]] = strength * 0.12     # 综卦
+        T[h, CUO_GUA[h]] = strength * 0.08      # 错卦
+        # 序卦传邻卦
+        if h > 0: T[h, h-1] = strength * 0.05
+        if h < N_HEXAGRAMS-1: T[h, h+1] = strength * 0.05
+    T += 1.0  # Laplace smoothing
+    return T
+
+
+# ============================================================================
+# 易经隐马尔可夫模型 (I Ching HMM) — 卦为隐状态, 天气为发射
+# ============================================================================
+
+class IChingHMM:
+    """
+    两层易经隐马尔可夫模型:
+    
+    隐状态层: z_t ∈ {1..64} (卦象)
+      p(z_{t+1} | z_t) ~ Dirichlet(trans_alpha[z_t, :])
+    
+    观测层: w_t ∈ {1..8} (天气)
+      p(w_t | z_t) ~ Dirichlet(emit_alpha[z_t, :])
+    
+    推理 (观象): Forward 滤波 → p(z_t | w_{1..t})
+    预测 (玩辞): p(w_{t+1} | w_{1..t}) = Σ p(w_{t+1}|z_{t+1}) p(z_{t+1}|z_t) p(z_t|history)
+    更新: 软 EM — 用滤波分布加权更新转移矩阵和发射矩阵
+    """
+
+    def __init__(self, hex_affinities, trans_strength=10.0, emit_strength=3.0):
+        self.nh = N_HEXAGRAMS; self.nw = N_WEATHER
+        
+        # 转移矩阵 Dirichlet: (64, 64)
+        self.trans_alpha = build_transition_prior(trans_strength)
+        self.prior_trans = self.trans_alpha.copy()
+        
+        # 发射矩阵 Dirichlet: (64, 8)  
+        self.emit_alpha = np.zeros((self.nh, self.nw))
+        for h in range(self.nh):
+            self.emit_alpha[h, :] = emit_strength * hex_affinities[h, :] + 1.0
+        self.prior_emit = self.emit_alpha.copy()
+        
+        # 滤波信念: p(z_t | w_{1..t})
+        self.belief = np.ones(self.nh) / self.nh
+    
+    def forward_filter(self, observed_weather):
+        """
+        一步 Forward 滤波: belief_{t-1} → belief_t
+        α_t(z) ∝ p(w_t | z) × Σ_{z'} p(z | z') × α_{t-1}(z')
+        """
+        emit_p = self.emit_alpha[:, observed_weather] / self.emit_alpha.sum(axis=1)
+        trans_p = self.trans_alpha / self.trans_alpha.sum(axis=1, keepdims=True)
+        pred_belief = self.belief @ trans_p  # Σ_{z'} p(z|z') * α(z')
+        new_belief = emit_p * pred_belief
+        s = new_belief.sum()
+        if s > 1e-12:
+            self.belief = new_belief / s
+        else:
+            self.belief = np.ones(self.nh) / self.nh
+    
+    def predict(self, history):
+        """
+        预测下一个天气: p(w_{t+1} | w_{1..t})
+        = Σ_{z_t, z_{t+1}} p(w_{t+1}|z_{t+1}) p(z_{t+1}|z_t) belief(z_t)
+        """
+        if len(history) == 0:
+            return np.ones(self.nw) / self.nw
+        
+        trans_p = self.trans_alpha / self.trans_alpha.sum(axis=1, keepdims=True)
+        emit_p = self.emit_alpha / self.emit_alpha.sum(axis=1, keepdims=True)
+        
+        # belief(t) × trans → belief_{t+1|t}
+        next_belief = self.belief @ trans_p  # (64,) 
+        
+        # p(w_{t+1}|history) = Σ_z emit(z, w_{t+1}) × next_belief(z)
+        pred = next_belief @ emit_p  # (8,)
+        return pred / pred.sum()
+    
+    def update(self, history, observed, lr_trans=1.0, lr_emit=1.0):
+        """
+        贝叶斯更新: 用滤波分布加权更新转移和发射参数.
+        """
+        if len(history) == 0:
+            return
+        
+        # 更新发射矩阵: emit_alpha[z, w_obs] += lr × belief_old(z)
+        emit_update = lr_emit * self.belief
+        self.emit_alpha[:, observed] += emit_update
+        
+        # Forward 滤波到新状态
+        old_belief = self.belief.copy()
+        self.forward_filter(observed)
+        
+        # 更新转移矩阵: trans_alpha[z_old, z_new] += lr × belief_old(z_old) × belief_new(z_new)
+        trans_update = lr_trans * np.outer(old_belief, self.belief)
+        self.trans_alpha += trans_update
+    
+    def entropy(self, history):
+        p = self.predict(history)
+        p = np.clip(p, 1e-12, 1.0)
+        return -np.sum(p * np.log(p))
+
+    def param_count(self):
+        return self.nh * self.nh + self.nh * self.nw
+
+
+# ============================================================================
+# 因子化易经 HMM — 64×64转移分解为两个8×8三爻转移
+# ============================================================================
+
+class FactoredIChingHMM:
+    """
+    因子化易经隐马尔可夫模型。
+    
+    转移矩阵: p(u_{t+1},l_{t+1} | u_t,l_t) = p(u_{t+1}|u_t) × p(l_{t+1}|l_t)
+    两个 8×8 三爻转移矩阵 (共128参数), 替代 64×64 矩阵 (4096参数).
+    
+    发射矩阵: 64×8 (保持不变, 三爻共享先验).
+    
+    信念: 因式化 p(u,l) ≈ p(u) × p(l), 减少滤波计算量.
+    """
+
+    def __init__(self, hex_affinities, trans_strength=5.0, emit_strength=3.0):
+        self.nt = 8; self.nh = 64; self.nw = 8
+        
+        # 两个 8×8 三爻转移矩阵
+        self.trans_u = self._build_trigram_trans_prior(trans_strength)
+        self.trans_l = self._build_trigram_trans_prior(trans_strength)
+        
+        # 发射矩阵: (64, 8)
+        self.emit_alpha = np.zeros((self.nh, self.nw))
+        for h in range(self.nh):
+            self.emit_alpha[h, :] = emit_strength * hex_affinities[h, :] + 1.0
+        
+        # 因式化信念: p(u) × p(l)
+        self.belief_u = np.ones(self.nt) / self.nt
+        self.belief_l = np.ones(self.nt) / self.nt
+    
+    def _build_trigram_trans_prior(self, strength):
+        """8×8 三爻转移先验: 自稳 + 五行生克."""
+        T = np.full((8, 8), 0.1)
+        for t in range(8):
+            T[t, t] = strength * 0.40  # 自稳
+        # 五行生克链: 木(3,2)→火(5)→土(1,6)→金(0,7)→水(4)→木
+        sheng = [(3,5),(2,5),(5,1),(5,6),(1,0),(6,0),(0,4),(7,4),(4,3),(4,2)]
+        for a, b in sheng:
+            T[a, b] += strength * 0.06
+        T += 1.0
+        return T
+    
+    def _full_transition(self):
+        """Kronecker积构建64×64转移矩阵: T = Tu ⊗ Tl, 行归一化."""
+        pu = self.trans_u / self.trans_u.sum(axis=1, keepdims=True)
+        pl = self.trans_l / self.trans_l.sum(axis=1, keepdims=True)
+        # Kronecker: T[(u',l'), (u,l)] = pu[u,u'] × pl[l,l']
+        # Shape: (8,8,8,8) → reshape to (64,64)
+        T = np.einsum('ab,cd->bdac', pu, pl)  # pu[a,b]*pl[c,d] => T[b,d,a,c]
+        T = T.reshape(8*8, 8*8)  # (64,64)
+        T /= T.sum(axis=1, keepdims=True)
+        return T
+    
+    def _hex_to_ul(self, h):
+        return HEX_TO_TRIGRAMS[h]
+    
+    def forward_filter(self, observed):
+        """因式化 Forward 滤波."""
+        # 发射概率
+        emit_p = self.emit_alpha[:, observed] / self.emit_alpha.sum(axis=1)
+        # 全转移矩阵
+        T = self._full_transition()
+        
+        # 全信念: belief[(u,l)]
+        full_belief = np.outer(self.belief_u, self.belief_l).ravel()  # (64,)
+        
+        # Forward
+        pred_belief = full_belief @ T  # (64,)
+        new_full = emit_p * pred_belief
+        s = new_full.sum()
+        if s > 1e-12:
+            new_full /= s
+        else:
+            new_full = np.ones(self.nh) / self.nh
+        
+        # 因式化: 边缘化
+        new_full = new_full.reshape(8, 8)
+        self.belief_u = new_full.sum(axis=1)  # 边缘化 l
+        self.belief_l = new_full.sum(axis=0)  # 边缘化 u
+        self.belief_u /= self.belief_u.sum()
+        self.belief_l /= self.belief_l.sum()
+    
+    def predict(self, history):
+        if len(history) == 0:
+            return np.ones(self.nw) / self.nw
+        
+        T = self._full_transition()
+        emit_p = self.emit_alpha / self.emit_alpha.sum(axis=1, keepdims=True)
+        
+        full_belief = np.outer(self.belief_u, self.belief_l).ravel()
+        next_belief = full_belief @ T  # (64,)
+        pred = next_belief @ emit_p  # (8,)
+        return pred / pred.sum()
+    
+    def update(self, history, observed, lr_trans=0.3, lr_emit=1.0):
+        if len(history) == 0:
+            return
+        
+        # 旧信念
+        old_full = np.outer(self.belief_u, self.belief_l)  # (8,8)
+        
+        # 更新发射
+        emit_update = lr_emit * old_full.ravel()
+        self.emit_alpha[:, observed] += emit_update
+        
+        # Forward 滤波
+        self.forward_filter(observed)
+        
+        # 因式化信念
+        new_full = np.outer(self.belief_u, self.belief_l)  # (8,8)
+        
+        # 更新两个三爻转移矩阵: 边缘化
+        # trans_u[u_old, u_new] += Σ_{l_old,l_new} old_full[u_old,l_old] × new_full[u_new,l_new]
+        # = (Σ_l old_full[u_old,l]) × (Σ_l new_full[u_new,l])
+        u_marginal_old = old_full.sum(axis=1)  # p(u_old)
+        u_marginal_new = new_full.sum(axis=1)  # p(u_new)
+        self.trans_u += lr_trans * np.outer(u_marginal_old, u_marginal_new)
+        
+        l_marginal_old = old_full.sum(axis=0)  # p(l_old)
+        l_marginal_new = new_full.sum(axis=0)  # p(l_new)
+        self.trans_l += lr_trans * np.outer(l_marginal_old, l_marginal_new)
+    
+    def param_count(self):
+        return self.nt*self.nt*2 + self.nh*self.nw
+
+
+
+
 # ============================================================================
 # 对照组模型
 # ============================================================================
