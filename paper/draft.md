@@ -208,9 +208,9 @@ These are precisely the properties missing from current LLM architectures.
 5.2 Scaling the Approach
 Our 64-state discrete space is a proof of concept. The core insight—that 64 hexagrams were a computational constraint, not a cosmic truth—points toward generalization:
 
-Continuous state spaces: Replace discrete hexagrams with continuous latent variables in a high-dimensional space.
+Continuous state spaces: Replace discrete hexagrams with continuous latent variables in a high-dimensional space. Gaussian Processes [3] and the HDP framework [2] provide the mathematical foundation for this transition, enabling models that automatically determine the appropriate state-space resolution from data.
 
-Learned priors: Instead of hand-designing the trigram-element affinity structure, learn it from data while retaining interpretability constraints.
+Learned priors: Instead of hand-designing the trigram-element affinity structure, learn it from data while retaining interpretability constraints. Recent work on causal representation learning [5] suggests methods for discovering structured latent variables that maintain interpretable semantics—a promising direction for automating the prior construction that we currently perform manually.
 
 Hierarchical state spaces: Build nested hexagram structures—hexagrams within hexagrams—to model multi-scale dynamics.
 
@@ -237,7 +237,7 @@ We identify four key limitations of the current work, each suggesting a clear di
 
 **Manual prior construction.** The trigram-element affinity vectors were hand-designed based on qualitative interpretation of the Yi Jing. While the ablation experiments demonstrate that this specific prior outperforms random alternatives, the manual approach does not scale to arbitrary domains. Automated prior discovery—potentially using the Yi Jing text corpus to learn affinity embeddings—remains an open challenge.
 
-**Discrete state space.** Our 64-state hexagram space is fundamentally discrete. Real-world dynamics unfold in continuous, high-dimensional manifolds. Extending this framework to continuous latent spaces (e.g., variational autoencoders with structured priors, or Gaussian process state-space models) would substantially increase modeling capacity.
+**Discrete state space.** Our 64-state hexagram space is fundamentally discrete. Real-world dynamics unfold in continuous, high-dimensional manifolds. Extending this framework to continuous latent spaces—for instance, through Gaussian Process state-space models [3]—would substantially increase modeling capacity, as would hierarchical Bayesian extensions that automatically determine the required number of latent states [2].
 
 **No action or intervention.** Our model is purely observational—it predicts from passive weather sequences. A true world model should support counterfactual reasoning ("what if we intervened?") and active learning ("what observation would reduce uncertainty most?"). Integrating causal inference and active sensing into the Bayesian framework is a critical research direction.
 
@@ -251,17 +251,32 @@ We do not claim to have built a better GPT. We claim to have identified a direct
 Acknowledgments
 This paper emerged from an extended philosophical and technical dialogue between the human author and DeepSeek AI Assistant. The core ideas—the critique of next-token prediction, the interpretation of the Yi Jing as a state-space model, and the proposed Bayesian framework—were co-developed through iterative discussion.
 
-References (Preliminary)
-Vaswani et al. (2017). "Attention Is All You Need."
+References
 
-Ha & Schmidhuber (2018). "World Models."
+[1] Ghahramani, Z. (2015). "Probabilistic machine learning and artificial intelligence." *Nature*, 521(7553), 452–459.
 
-DeepMind (2024). "Genie: Generative Interactive Environments."
+[2] Teh, Y. W., Jordan, M. I., Beal, M. J., & Blei, D. M. (2006). "Hierarchical Dirichlet processes." *Journal of the American Statistical Association*, 101(476), 1566–1581.
 
-Leibniz, G.W. (1703). "Explication de l'Arithmétique Binaire." (On the binary system and its connection to the Yi Jing hexagrams.)
+[3] Rasmussen, C. E., & Williams, C. K. I. (2006). *Gaussian Processes for Machine Learning*. MIT Press.
 
-Pearl, J. (2009). "Causality: Models, Reasoning, and Inference."
+[4] Pearl, J. (2009). *Causality: Models, Reasoning, and Inference*. 2nd ed., Cambridge University Press.
 
-MacKay, D.J.C. (2003). "Information Theory, Inference, and Learning Algorithms."
+[5] Schölkopf, B., Locatello, F., Bauer, S., Ke, N. R., Kalchbrenner, N., Goyal, A., & Bengio, Y. (2021). "Toward causal representation learning." *Proceedings of the IEEE*, 109(5), 612–634.
 
-License: This paper is released under CC BY 4.0. Thoughts should flow freely.
+[6] Peters, J., Janzing, D., & Schölkopf, B. (2017). *Elements of Causal Inference: Foundations and Learning Algorithms*. MIT Press.
+
+[7] Ha, D., & Schmidhuber, J. (2018). "World models." *arXiv preprint arXiv:1803.10122*.
+
+[8] LeCun, Y. (2022). "A path towards autonomous machine intelligence." *OpenReview*, version 0.9.2.
+
+[9] Micheli, V., Alonso, E., & Fleuret, F. (2023). "Transformers are sample-efficient world models." *arXiv preprint arXiv:2209.00588*.
+
+[10] Matsuo, Y., LeCun, Y., Sahani, M., Precup, D., Silver, D., Sugiyama, M., Uchibe, E., & Morimoto, J. (2022). "Deep learning, reinforcement learning, and world models." *Neural Networks*, 152, 267–275.
+
+[11] Leibniz, G. W. (1703). "Explication de l'Arithmétique Binaire." *Mémoires de l'Académie Royale des Sciences*.
+
+[12] MacKay, D. J. C. (2003). *Information Theory, Inference, and Learning Algorithms*. Cambridge University Press.
+
+---
+
+*License: This paper is released under CC BY 4.0.*
