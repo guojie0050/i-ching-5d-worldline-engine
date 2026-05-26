@@ -18,8 +18,8 @@ import json, urllib.request, os, csv, warnings
 warnings.filterwarnings("ignore")
 
 from model import (
-    TrigramBayesianModel, NeuralNetModel,
-    TRIGRAM_WEATHER, N_WEATHER, WEATHER_TYPES,
+    TrigramBayesianModel, IChingBayesianModel, NeuralNetModel,
+    TRIGRAM_WEATHER, HEXAGRAM_AFFINITIES, N_WEATHER, WEATHER_TYPES,
 )
 
 # ============================================================================
@@ -81,7 +81,7 @@ def to_seq(data):
 # 实验
 # ============================================================================
 
-LABELS = ["IChing-1d","IChing-2d","IChing-3d","NN-1d","NN-2d","NN-3d"]
+LABELS = ["Tri-1d","Tri-2d","Tri-3d","Hex-1d","Hex-2d","Hex-3d","NN-1d","NN-2d","NN-3d"]
 SIZES, EVAL_W = [500, 1000, 2000, 3000], 365
 SEEDS = [42, 123, 456, 789, 1011]
 
@@ -92,14 +92,23 @@ def run(weather):
         for N in SIZES:
             tw = weather[:N]; ew = weather[N:N+EVAL_W]
 
-            # IChing
-            m_i = TrigramBayesianModel(TRIGRAM_WEATHER, 1.0, 0.5)
+            # Trigram
+            m_t = TrigramBayesianModel(TRIGRAM_WEATHER, 1.0, 0.5)
             for t in range(1, len(tw)):
-                m_i.update(tw[:t].tolist(), tw[t])
-            acc = evaluate_multistep(m_i, tw, ew, 3)
-            res[N]["IChing-1d"].append(acc[0])
-            res[N]["IChing-2d"].append(acc[1])
-            res[N]["IChing-3d"].append(acc[2])
+                m_t.update(tw[:t].tolist(), tw[t])
+            acc = evaluate_multistep(m_t, tw, ew, 3)
+            res[N]["Tri-1d"].append(acc[0])
+            res[N]["Tri-2d"].append(acc[1])
+            res[N]["Tri-3d"].append(acc[2])
+
+            # Hexagram
+            m_h = IChingBayesianModel(HEXAGRAM_AFFINITIES, 1.0, 0.5)
+            for t in range(1, len(tw)):
+                m_h.update(tw[:t].tolist(), tw[t])
+            acc = evaluate_multistep(m_h, tw, ew, 3)
+            res[N]["Hex-1d"].append(acc[0])
+            res[N]["Hex-2d"].append(acc[1])
+            res[N]["Hex-3d"].append(acc[2])
 
             # NN
             m_n = NeuralNetModel(ctx_win=3, hidden=32, lr=0.005, seed=seed)
@@ -115,14 +124,18 @@ def run(weather):
 def plot(res):
     fig, (ax1, ax2) = plt.subplots(1,2,figsize=(14,5.5))
 
-    colors_i = {1:"#1a5276",2:"#2980b9",3:"#5499c7"}
+    colors_t = {1:"#1a5276",2:"#2980b9",3:"#5499c7"}
+    colors_h = {1:"#27ae60",2:"#2ecc71",3:"#82e0aa"}
     colors_n = {1:"#e74c3c",2:"#ec7063",3:"#f1948a"}
 
-    # Accuracy curves
-    for d, lb in [(1,"IChing-1d"),(2,"IChing-2d"),(3,"IChing-3d")]:
+    for d, lb in [(1,"Tri-1d"),(2,"Tri-2d"),(3,"Tri-3d")]:
         means = [np.mean(res[N][lb]) for N in SIZES]
-        ax1.plot(SIZES, means, color=colors_i[d], marker="o", lw=2, ms=7,
-                 label=f"IChing {d}-day")
+        ax1.plot(SIZES, means, color=colors_t[d], marker="o", lw=2, ms=7,
+                 label=f"Trigram {d}-day")
+    for d, lb in [(1,"Hex-1d"),(2,"Hex-2d"),(3,"Hex-3d")]:
+        means = [np.mean(res[N][lb]) for N in SIZES]
+        ax1.plot(SIZES, means, color=colors_h[d], marker="s", lw=2, ms=7,
+                 label=f"Hexagram {d}-day")
     for d, lb in [(1,"NN-1d"),(2,"NN-2d"),(3,"NN-3d")]:
         means = [np.mean(res[N][lb]) for N in SIZES]
         ax1.plot(SIZES, means, color=colors_n[d], marker="x", lw=2, ms=7,
@@ -134,16 +147,20 @@ def plot(res):
 
     # Decay rate at 3000 days
     N_k = 3000
-    i_acc = [np.mean(res[N_k][f"IChing-{d}d"]) for d in [1,2,3]]
+    t_acc = [np.mean(res[N_k][f"Tri-{d}d"]) for d in [1,2,3]]
+    h_acc = [np.mean(res[N_k][f"Hex-{d}d"]) for d in [1,2,3]]
     n_acc = [np.mean(res[N_k][f"NN-{d}d"]) for d in [1,2,3]]
-    x = np.arange(3); w = 0.35
-    ax2.bar(x-w/2, i_acc, w, color=[colors_i[d] for d in [1,2,3]],
-            label="IChing", edgecolor="white")
-    ax2.bar(x+w/2, n_acc, w, color=[colors_n[d] for d in [1,2,3]],
+    x = np.arange(3); w = 0.25
+    ax2.bar(x-w, t_acc, w, color=[colors_t[d] for d in [1,2,3]],
+            label="Trigram (512)", edgecolor="white")
+    ax2.bar(x, h_acc, w, color=[colors_h[d] for d in [1,2,3]],
+            label="Hexagram (4096)", edgecolor="white")
+    ax2.bar(x+w, n_acc, w, color=[colors_n[d] for d in [1,2,3]],
             label="NN", edgecolor="white")
-    for i, (ia, na) in enumerate(zip(i_acc, n_acc)):
-        ax2.text(i-w/2, ia+0.005, f"{ia:.1%}", ha="center", fontsize=9)
-        ax2.text(i+w/2, na+0.005, f"{na:.1%}", ha="center", fontsize=9)
+    for i, (ta, ha, na) in enumerate(zip(t_acc, h_acc, n_acc)):
+        ax2.text(i-w, ta+0.005, f"{ta:.1%}", ha="center", fontsize=7)
+        ax2.text(i, ha+0.005, f"{ha:.1%}", ha="center", fontsize=7)
+        ax2.text(i+w, na+0.005, f"{na:.1%}", ha="center", fontsize=7)
     ax2.set_xticks(x); ax2.set_xticklabels(["1-day","2-day","3-day"])
     ax2.set_xlabel("Prediction Horizon"); ax2.set_ylabel(f"Accuracy @{N_k} days")
     ax2.set_title(f"Accuracy Decay with Horizon (@{N_k} days)")
@@ -182,17 +199,18 @@ def main():
 
     print(f"\n[3/3] Results (@3000 days):")
     for md in range(1,4):
-        ia = np.mean(results[3000][f"IChing-{md}d"])
+        ta = np.mean(results[3000][f"Tri-{md}d"])
+        ha = np.mean(results[3000][f"Hex-{md}d"])
         na = np.mean(results[3000][f"NN-{md}d"])
-        print(f"  {md}-day: IChing={ia:.1%}  NN={na:.1%}  Δ={ia-na:+.1%}")
+        print(f"  {md}-day: Tri={ta:.1%}  Hex={ha:.1%}  NN={na:.1%}")
 
-    i1 = np.mean(results[3000]["IChing-1d"])
-    i3 = np.mean(results[3000]["IChing-3d"])
-    n1 = np.mean(results[3000]["NN-1d"])
-    n3 = np.mean(results[3000]["NN-3d"])
+    t1 = np.mean(results[3000]["Tri-1d"])
+    t3 = np.mean(results[3000]["Tri-3d"])
+    h1 = np.mean(results[3000]["Hex-1d"])
+    h3 = np.mean(results[3000]["Hex-3d"])
     print(f"\n  3天衰减:")
-    print(f"    IChing: {i1:.1%}→{i3:.1%} (衰减={i1-i3:.1%})")
-    print(f"    NN:     {n1:.1%}→{n3:.1%} (衰减={n1-n3:.1%})")
+    print(f"    Trigram:  {t1:.1%}→{t3:.1%} (Δ={t1-t3:.1%})")
+    print(f"    Hexagram: {h1:.1%}→{h3:.1%} (Δ={h1-h3:.1%})")
 
     plot(results)
     save_csv(results)
