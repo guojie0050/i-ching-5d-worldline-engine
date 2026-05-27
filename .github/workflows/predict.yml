@@ -1,0 +1,33 @@
+name: 五维天气预测
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天 UTC 0:00 (北京 8:00)
+  workflow_dispatch:      # 允许手动触发
+
+jobs:
+  predict:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install numpy
+      
+      - name: Run prediction
+        run: python mvp/predict_realtime.py
+      
+      - name: Commit & push results
+        run: |
+          git config user.name "5D Predictor Bot"
+          git config user.email "bot@5d.yijing"
+          git add data/ docs/
+          git diff --staged --quiet || git commit -m "📡 $(date +%Y-%m-%d) 天气预测更新"
+          git push

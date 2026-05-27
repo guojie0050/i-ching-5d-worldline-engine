@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔮 五维易经天气预测</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; background: #0a0a1a; color: #c8c8d4; }
+  .card { background: #12122a; border-radius: 12px; padding: 1.5rem; margin: 1rem 0; border: 1px solid #2a2a4a; }
+  .prediction { font-size: 2.5rem; text-align: center; font-weight: bold; margin: 1rem 0; }
+  .sunny { color: #f0c040; } .rain { color: #6090d0; } .cloudy { color: #8888a0; }
+  .bar { height: 8px; border-radius: 4px; margin: 4px 0; background: #2a2a4a; }
+  .bar-fill { height: 100%; border-radius: 4px; }
+  .table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  .table td, .table th { padding: 6px 8px; border-bottom: 1px solid #2a2a4a; text-align: left; }
+  .correct { color: #4caf50; } .wrong { color: #e74c3c; }
+  h1 { text-align: center; font-size: 1.5rem; color: #8090c0; }
+  .footer { text-align: center; color: #666; font-size: 0.8rem; margin-top: 2rem; }
+</style>
+</head>
+<body>
+<h1>🔮 五维易经天气预测</h1>
+<div class="card">
+  <div style="text-align:center;color:#888;font-size:0.9rem" id="date">---</div>
+  <div class="prediction" id="pred">---</div>
+  <div style="font-size:0.9rem;color:#888">
+    共识度: <span id="ratio">---</span> &nbsp;|&nbsp; 世界线: <span id="wl">---</span>
+  </div>
+  <div id="wlBars"></div>
+</div>
+
+<div class="card">
+  <h3>📅 最近预测</h3>
+  <table class="table" id="history"></table>
+</div>
+
+<div class="footer">
+  五维投影理论 · 三陈九卦推演 · 五人共识网络 · 贝叶斯坍缩<br>
+  数据: Open-Meteo 北京气象站 · 自动更新于 <span id="updateTime">---</span>
+</div>
+
+<script>
+fetch('data/prediction_history.json')
+  .then(r => r.json())
+  .then(data => {
+    if (!data.length) return;
+    const last = data[data.length - 1];
+    
+    document.getElementById('date').textContent = '📅 ' + last.date;
+    
+    const predEl = document.getElementById('pred');
+    predEl.textContent = last.prediction;
+    predEl.className = 'prediction ' + 
+      (last.prediction.includes('晴') ? 'sunny' : last.prediction.includes('雨') ? 'rain' : 'cloudy');
+    
+    document.getElementById('ratio').textContent = (last.ratio * 100).toFixed(0) + '%';
+    document.getElementById('wl').textContent = 
+      ['晴主导','雨主导','正常'][last.wl] + ' (' + last.wl_probs.map(p => (p*100).toFixed(0)+'%').join('/') + ')';
+    
+    // 世界线概率条
+    const colors = ['#f0c040','#6090d0','#888'];
+    const names = ['晴','雨','阴'];
+    document.getElementById('wlBars').innerHTML = last.wl_probs.map((p,i) => 
+      `<div style="display:flex;align-items:center;gap:8px;margin:2px 0">
+        <span style="width:30px">${names[i]}</span>
+        <div class="bar" style="flex:1"><div class="bar-fill" style="width:${(p*100).toFixed(0)}%;background:${colors[i]}"></div></div>
+        <span style="width:40px;text-align:right">${(p*100).toFixed(0)}%</span>
+      </div>`
+    ).join('');
+    
+    // 历史表
+    const reversed = [...data].reverse().slice(0, 14);
+    document.getElementById('history').innerHTML = 
+      '<tr><th>日期</th><th>预测</th><th>共识</th></tr>' +
+      reversed.map(e => 
+        `<tr>
+          <td>${e.date.slice(5)}</td>
+          <td class="${e.prediction.includes('晴')?'sunny':e.prediction.includes('雨')?'rain':'cloudy'}">${e.prediction}</td>
+          <td>${(e.ratio*100).toFixed(0)}%</td>
+        </tr>`
+      ).join('');
+    
+    document.getElementById('updateTime').textContent = last.date;
+  });
+</script>
+</body>
+</html>

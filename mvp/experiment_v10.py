@@ -1,179 +1,152 @@
 #!/usr/bin/env python3
 """
-V10b: 五维投影观测模型（基于参考实现 + 三项关键修复）
+V10 消融实验 — 四城市数据
+==========================
+验证五维投影理论各组件的因果贡献:
+  ① 温度缩放 (T)
+  ② 结构化先验 (prior)
+  ③ 加权更新 (weight)
+  ④ 异常检测 (anomaly)
 
-修复:
-  1. 温度缩放: probs = softmax(log(probs) + log(likes) / T), T=0.3
-  2. 结构化先验: 每条世界线的 counts 从不同卦象倾向初始化
-  3. 加权更新: counts[wl] += probs[wl] (高概率世界线获得更多证据)
-
-数据: 3条世界线, 晴/雨/风分别主导, 每100-300天切换
+城市: Beijing, Shanghai, Guangzhou, Chengdu
 """
 
 import numpy as np
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import warnings; warnings.filterwarnings("ignore")
+import json, os, warnings
+from datetime import date
+warnings.filterwarnings("ignore")
 
 N_HEX, N_W = 64, 4
-WEATHER = ["晴","雨","风","雾"]
-TEMP = 0.3         # 温度缩放
-PRIOR_STR = 5.0    # 先验强度
-SWITCH_THRESHOLD = 0.08
-SWITCH_PATIENCE = 3
+TEMP = 0.3; PRIOR_STR = 5.0
+TOTAL_DAYS = 2000
+SEEDS = [42, 123, 456, 789, 1011]
+
+# 八卦天气向量
+TRIGRAM_4D = np.array([
+    [0.55, 0.10, 0.15, 0.20],[0.05, 0.25, 0.30, 0.40],
+    [0.15, 0.35, 0.35, 0.15],[0.20, 0.15, 0.50, 0.15],
+    [0.10, 0.50, 0.20, 0.20],[0.50, 0.05, 0.15, 0.30],
+    [0.10, 0.20, 0.15, 0.55],[0.15, 0.40, 0.20, 0.25],
+])
+
+KING_WEN_TRIGRAMS = [
+    (0,0),(7,7),(2,4),(7,2),(2,0),(0,2),(7,7),(2,7),
+    (5,0),(0,6),(7,0),(0,7),(0,3),(3,0),(7,1),(4,7),
+    (6,4),(1,5),(7,6),(5,7),(3,4),(1,3),(1,7),(5,1),
+    (0,4),(1,0),(1,4),(6,5),(2,2),(3,3),(6,3),(4,3),
+    (0,1),(4,0),(3,7),(7,3),(5,5),(6,4),(2,1),(1,2),
+    (1,6),(5,4),(6,0),(0,5),(6,7),(7,1),(6,6),(5,1),
+    (6,5),(3,5),(4,4),(1,1),(5,1),(4,6),(4,5),(3,6),
+    (5,5),(6,6),(5,2),(2,6),(5,6),(4,1),(2,3),(3,2),
+]
+
+def natural_dists():
+    nd = np.zeros((N_HEX, N_W))
+    for h, (u, l) in enumerate(KING_WEN_TRIGRAMS):
+        nd[h] = 0.55 * TRIGRAM_4D[u] + 0.45 * TRIGRAM_4D[l]
+        nd[h] /= nd[h].sum()
+    return nd
 
 # ============================================================================
-# 数据生成: 三条区分明确的世界线
+# 真实天气 → 4类
 # ============================================================================
-def generate_worldline_data(n_days, seed):
-    """生成卦象序列 + 天气序列 + 真实世界线, 世界线间差异显著。"""
-    rng = np.random.default_rng(seed)
+WMO = {0:0,1:0,2:2,3:1,45:7,48:7,51:4,53:4,55:4,61:4,63:4,65:4,
+       71:7,73:7,75:7,80:4,81:4,82:4,95:3,96:3,99:3}
+# 映射到4类: 0=clear,1=rain,2=overcast,3=fog/snow
+
+def load_city(name):
+    path = f"/tmp/{name}_weather.json"
+    if not os.path.exists(path): return None
+    d = json.load(open(path))
+    codes = d["daily"]["weather_code"]
+    temps = d["daily"]["temperature_2m_max"]
+    precip = d["daily"]["precipitation_sum"]
     
-    # 每条世界线的 64×4 天气概率表
-    # WL0: 晴主导 (0.55), WL1: 雨主导 (0.55), WL2: 风主导 (0.55)
-    dists = []
-    for wl_bias in [0, 1, 2]:  # 晴, 雨, 风
-        dist = np.full((N_HEX, N_W), 0.15)
-        dist[:, wl_bias] = 0.55
-        # 卦象间仍有微小差异 (八卦倾向)
-        for h in range(N_HEX):
-            tri_u = h % 8  # simplified trigram index
-            tri_l = (h // 8) % 8
-            # 乾卦略更晴, 坎卦略更雨, 巽卦略更风
-            if tri_u in (0, 5) or tri_l in (0, 5):  # 乾/离
-                dist[h, 0] += 0.05; dist[h, wl_bias if wl_bias != 0 else 1] -= 0.05
-            if tri_u in (2, 4) or tri_l in (2, 4):  # 坎/震
-                dist[h, 1] += 0.05; dist[h, wl_bias if wl_bias != 1 else 0] -= 0.05
-            dist[h] /= dist[h].sum()
-        dists.append(dist)
-    
-    hexs = np.zeros(n_days, dtype=int)
-    wths = np.zeros(n_days, dtype=int)
-    true_wl = np.zeros(n_days, dtype=int)
-    
-    wl = 0; switch_at = rng.integers(100, 300)
-    for t in range(n_days):
-        if t >= switch_at:
-            wl = rng.integers(3)
-            switch_at = t + rng.integers(100, 300)
-        h = rng.integers(N_HEX)
-        hexs[t] = h; wths[t] = rng.choice(N_W, p=dists[wl][h]); true_wl[t] = wl
-    
-    return hexs, wths, true_wl, dists
+    wtypes = np.zeros(len(codes), dtype=int)
+    for i, (c, t, p) in enumerate(zip(codes, temps, precip)):
+        if t and t > 32: wtypes[i] = 0  # hot → clear
+        else:
+            w = WMO.get(c, 1)
+            wtypes[i] = w % 4  # map to 0-3
+    return wtypes
 
 
 # ============================================================================
-# 五维投影模型 (三项修复版)
+# 消融模型
 # ============================================================================
-class FiveDModel:
-    """五维投影观测模型。"""
-    
-    def __init__(self, n_wl=3):
-        self.n_wl = n_wl
-        # 修复2: 结构化先验 — 每条世界线有不同的初始倾向
+class AblationModel:
+    def __init__(self, n_wl=3, temp=TEMP, use_prior=True, use_weight=True, 
+                 use_anomaly=True, natural=None):
+        self.n_wl = n_wl; self.T = temp; self.use_anomaly = use_anomaly
         self.counts = np.ones((n_wl, N_HEX, N_W)) * PRIOR_STR
-        # WL0偏晴, WL1偏雨, WL2偏风
-        self.counts[0, :, 0] += PRIOR_STR * 0.3
-        self.counts[1, :, 1] += PRIOR_STR * 0.3
-        self.counts[2, :, 2] += PRIOR_STR * 0.3
-        
+        if use_prior and natural is not None:
+            for wl in range(n_wl):
+                self.counts[wl] += PRIOR_STR * natural
         self.probs = np.ones(n_wl) / n_wl
-        self.recent_ll = []
-        self.prob_history = []
-        self.anomalies = 0
+        self.prob_history = []; self.anomalies = 0
+        self.use_weight = use_weight
     
-    def predict(self, hexagram):
-        h = hexagram
+    def predict(self, h):
         pred = np.zeros(N_W)
         for wl in range(self.n_wl):
             p = self.counts[wl, h] / self.counts[wl, h].sum()
             pred += self.probs[wl] * p
         return pred / pred.sum()
     
-    def update(self, hexagram, true_weather):
-        h, w = hexagram, true_weather
-        
-        # 计算每条世界线的似然
+    def update(self, h, w):
         likes = np.zeros(self.n_wl)
         for wl in range(self.n_wl):
             p = self.counts[wl, h] / self.counts[wl, h].sum()
             likes[wl] = p[w]
         
-        # 修复1: 温度缩放的贝叶斯更新
-        log_probs = np.log(np.maximum(self.probs, 1e-12))
-        log_likes = np.log(np.maximum(likes, 1e-12))
-        log_probs = log_probs + log_likes / TEMP
-        log_probs -= log_probs.max()
-        self.probs = np.exp(log_probs)
-        self.probs /= self.probs.sum()
+        if self.T != 1.0:
+            lp = np.log(np.maximum(self.probs, 1e-12))
+            lp = lp + np.log(np.maximum(likes, 1e-12)) / self.T
+            lp -= lp.max()
+            self.probs = np.exp(lp); self.probs /= self.probs.sum()
+        else:
+            self.probs = self.probs * likes
+            self.probs /= self.probs.sum()
         
-        # 修复3: 加权更新 — 高概率世界线获得更多证据
         for wl in range(self.n_wl):
-            self.counts[wl, h, w] += self.probs[wl]
+            self.counts[wl, h, w] += self.probs[wl] if self.use_weight else 1.0
         
-        # 异常检测
-        self.recent_ll.append(likes.max())
-        if len(self.recent_ll) > SWITCH_PATIENCE:
-            self.recent_ll.pop(0)
         self.prob_history.append(self.probs.copy())
-        
-        if len(self.recent_ll) == SWITCH_PATIENCE:
-            if all(ll < SWITCH_THRESHOLD for ll in self.recent_ll):
-                self.probs = np.ones(self.n_wl) / self.n_wl
-                self.recent_ll = []
-                self.anomalies += 1
+        if self.use_anomaly:
+            self._check_anomaly(likes.max())
+    
+    def _check_anomaly(self, max_ll):
+        if not hasattr(self, '_recent'): self._recent = []
+        self._recent.append(max_ll)
+        if len(self._recent) > 3: self._recent.pop(0)
+        if len(self._recent) == 3 and all(ll < 0.10 for ll in self._recent):
+            self.probs = np.ones(self.n_wl) / self.n_wl
+            self._recent = []; self.anomalies += 1
 
 
 class FlatBayes:
-    """四维贝叶斯: 不追踪世界线。"""
-    def __init__(self):
+    def __init__(self, natural=None):
         self.counts = np.ones((N_HEX, N_W)) * PRIOR_STR
-    
+        if natural is not None: self.counts += PRIOR_STR * natural
     def predict(self, h):
         return self.counts[h] / self.counts[h].sum()
-    
     def update(self, h, w):
         self.counts[h, w] += 1.0
 
 
-class NoResetModel(FiveDModel):
-    """五维无重置: 跳过异常检测。"""
-    def update(self, h, w):
-        likes = np.zeros(self.n_wl)
-        for wl in range(self.n_wl):
-            p = self.counts[wl, h] / self.counts[wl, h].sum()
-            likes[wl] = p[w]
-        log_probs = np.log(np.maximum(self.probs, 1e-12))
-        log_probs = log_probs + np.log(np.maximum(likes, 1e-12)) / TEMP
-        log_probs -= log_probs.max()
-        self.probs = np.exp(log_probs); self.probs /= self.probs.sum()
-        for wl in range(self.n_wl):
-            self.counts[wl, h, w] += self.probs[wl]
-        self.prob_history.append(self.probs.copy())
-
-
-class GreedyModel(FiveDModel):
-    """五维贪婪: 只用最大概率世界线预测。"""
-    def predict(self, h):
-        wl = np.argmax(self.probs)
-        return self.counts[wl, h] / self.counts[wl, h].sum()
-
-
 class SimpleNN:
-    """MLP 基线。"""
     def __init__(self, seed=42):
         rng = np.random.default_rng(seed)
-        self.W1 = rng.normal(0, 0.1, (N_HEX, 32))
-        self.b1 = np.zeros(32)
-        self.W2 = rng.normal(0, 0.1, (32, N_W))
-        self.b2 = np.zeros(N_W); self.lr = 0.005
-    
+        self.W1 = rng.normal(0, 0.1, (N_HEX, 32)); self.b1 = np.zeros(32)
+        self.W2 = rng.normal(0, 0.1, (32, N_W)); self.b2 = np.zeros(N_W)
+        self.lr = 0.005
     def predict(self, h):
         x = np.zeros(N_HEX); x[h] = 1.0
         hh = np.maximum(0, x @ self.W1 + self.b1)
         l = hh @ self.W2 + self.b2; l -= l.max()
         p = np.exp(l); return p / p.sum()
-    
     def update(self, h, w):
         x = np.zeros(N_HEX); x[h] = 1.0
         hp = x @ self.W1 + self.b1; hh = np.maximum(0, hp)
@@ -190,125 +163,90 @@ class SimpleNN:
 # ============================================================================
 # 实验
 # ============================================================================
-LABELS = ["5D-Complete","4D-FlatBayes","5D-NoReset","5D-Greedy","Neural-Net"]
-SEEDS = [42, 123, 456, 789, 1011]
-N_DAYS = 2000
+ABLATION_LABELS = [
+    "5D-Complete","5D-NoTemp","5D-NoPrior",
+    "5D-NoWeight","5D-NoAnomaly","4D-Flat","Neural-Net"
+]
+CITIES = ["beijing","shanghai","guangzhou","chengdu"]
 
-def run():
-    results = {lb: {"acc": [], "sw_acc": []} for lb in LABELS}
-    results["5D-Complete"]["anomalies"] = 0
-    prob_hist = None; switch_pts = None; true_wl_hist = None
+def make_ablation_models(natural):
+    nd = natural if natural is not None else natural_dists()
+    return [
+        AblationModel(temp=TEMP, use_prior=True, use_weight=True, use_anomaly=True, natural=nd),
+        AblationModel(temp=1.0, use_prior=True, use_weight=True, use_anomaly=True, natural=nd),
+        AblationModel(temp=TEMP, use_prior=False, use_weight=True, use_anomaly=True, natural=nd),
+        AblationModel(temp=TEMP, use_prior=True, use_weight=False, use_anomaly=True, natural=nd),
+        AblationModel(temp=TEMP, use_prior=True, use_weight=True, use_anomaly=False, natural=nd),
+        FlatBayes(natural=nd),
+        SimpleNN(seed=42),
+    ]
+
+def run_city(weather_seq):
+    n = len(weather_seq)
+    results = {lb: [] for lb in ABLATION_LABELS}
     
     for si, seed in enumerate(SEEDS):
-        print(f"  Seed {si+1}/{len(SEEDS)}...", end=" ", flush=True)
-        hexs, wths, twl, dists = generate_worldline_data(N_DAYS, seed)
+        rng = np.random.default_rng(seed)
+        start = rng.integers(0, max(1, n - TOTAL_DAYS))
+        w_sub = weather_seq[start:start+TOTAL_DAYS]
+        hexs = rng.integers(0, N_HEX, TOTAL_DAYS)
         
-        models = [FiveDModel(), FlatBayes(), NoResetModel(),
-                  GreedyModel(), SimpleNN(seed=seed)]
+        models = make_ablation_models(natural_dists())
+        correct = {lb: 0 for lb in ABLATION_LABELS}
         
-        switches = np.where(np.diff(twl) != 0)[0] + 1
-        correct = {lb: 0 for lb in LABELS}
-        sw_correct = {lb: 0 for lb in LABELS}
-        sw_total = {lb: 0 for lb in LABELS}
-        
-        for t in range(N_DAYS):
-            h, tw = hexs[t], wths[t]
-            in_sw = any(sp <= t < sp + 50 for sp in switches)
-            
-            for lb, m in zip(LABELS, models):
-                pred = m.predict(h)
-                if np.argmax(pred) == tw:
+        for t in range(TOTAL_DAYS):
+            h, tw = hexs[t], w_sub[t]
+            for lb, m in zip(ABLATION_LABELS, models):
+                if np.argmax(m.predict(h)) == tw:
                     correct[lb] += 1
-                    if in_sw: sw_correct[lb] += 1
-                if in_sw: sw_total[lb] += 1
                 m.update(h, tw)
         
-        for lb in LABELS:
-            results[lb]["acc"].append(correct[lb] / N_DAYS)
-            results[lb]["sw_acc"].append(sw_correct[lb] / max(sw_total[lb], 1))
-        
-        results["5D-Complete"]["anomalies"] += models[0].anomalies
-        
-        if si == 0:
-            prob_hist = np.array(models[0].prob_history)
-            switch_pts = switches
-            true_wl_hist = twl
-        
-        print("done")
+        for lb in ABLATION_LABELS:
+            results[lb].append(correct[lb] / TOTAL_DAYS)
     
-    return results, prob_hist, switch_pts, true_wl_hist
-
-
-def plot_results(res, ph, sp, twl):
-    fig = plt.figure(figsize=(16, 10))
-    colors = {"5D-Complete":"#1a5276","4D-FlatBayes":"#2980b9",
-              "5D-NoReset":"#27ae60","5D-Greedy":"#e67e22","Neural-Net":"#e74c3c"}
-    
-    ax1 = fig.add_subplot(2,2,1)
-    x = np.arange(len(LABELS))
-    means = [np.mean(res[lb]["acc"]) for lb in LABELS]
-    stds = [np.std(res[lb]["acc"]) for lb in LABELS]
-    cis = [1.96*s/np.sqrt(len(SEEDS)) for s in stds]
-    ax1.bar(x, means, yerr=cis, color=[colors[lb] for lb in LABELS],
-            capsize=5, edgecolor="white")
-    for i, m in enumerate(means):
-        ax1.text(i, m+0.01, f"{m:.1%}", ha="center", fontweight="bold")
-    ax1.set_xticks(x); ax1.set_xticklabels(LABELS, rotation=15, ha="right", fontsize=7)
-    ax1.set_ylabel("Accuracy"); ax1.set_title("Overall (2000 days)")
-    ax1.axhline(0.25, color="gray", ls=":"); ax1.grid(alpha=0.2, axis="y")
-    
-    ax2 = fig.add_subplot(2,2,2)
-    sw_m = [np.mean(res[lb]["sw_acc"]) for lb in LABELS]
-    sw_s = [np.std(res[lb]["sw_acc"]) for lb in LABELS]
-    sw_c = [1.96*s/np.sqrt(len(SEEDS)) for s in sw_s]
-    ax2.bar(x, sw_m, yerr=sw_c, color=[colors[lb] for lb in LABELS],
-            capsize=5, edgecolor="white")
-    for i, m in enumerate(sw_m):
-        ax2.text(i, m+0.01, f"{m:.1%}", ha="center", fontweight="bold")
-    ax2.set_xticks(x); ax2.set_xticklabels(LABELS, rotation=15, ha="right", fontsize=7)
-    ax2.set_ylabel("Accuracy"); ax2.set_title("Post-Switch Recovery (50d)")
-    ax2.axhline(0.25, color="gray", ls=":"); ax2.grid(alpha=0.2, axis="y")
-    
-    ax3 = fig.add_subplot(2,1,2)
-    wl_colors = ["#e74c3c","#27ae60","#2980b9"]
-    for wl in range(3):
-        ax3.plot(ph[:, wl], color=wl_colors[wl], lw=1.5, alpha=0.8,
-                 label=f"WL-{wl}")
-    for sp_ in sp:
-        ax3.axvline(sp_, color="gray", ls="--", alpha=0.3, lw=0.8)
-    ax3.set_xlabel("Day"); ax3.set_ylabel("Probability")
-    ax3.set_title("Worldline Probability Evolution")
-    ax3.legend(fontsize=8); ax3.set_ylim(0, 1.05); ax3.grid(alpha=0.2)
-    
-    plt.tight_layout()
-    plt.savefig("iching_v10_five_dim.png", dpi=150, bbox_inches="tight")
-    print("[图] iching_v10_five_dim.png")
-    plt.close(fig)
+    return results
 
 
 def main():
     print("="*64)
-    print("  V10b: 5D Projection Model (3 fixes applied)")
+    print("  V10 Ablation — 4 Cities")
     print("="*64)
-    print(f"  T={TEMP}, prior_strength={PRIOR_STR}, threshold={SWITCH_THRESHOLD}")
     
-    results, ph, sp, twl = run()
+    all_results = {}
+    for city in CITIES:
+        wseq = load_city(city)
+        if wseq is None:
+            print(f"  {city}: NO DATA")
+            continue
+        print(f"\n  {city}: {len(wseq)} days")
+        res = run_city(wseq)
+        all_results[city] = res
+        for lb in ABLATION_LABELS:
+            print(f"    {lb:<16}: {np.mean(res[lb]):.1%}")
     
-    print(f"\n  {'='*60}")
-    print(f"  {'Model':<20} {'Overall':>10} {'Post-Switch':>12} {'Anomalies':>10}")
-    print(f"  {'-'*60}")
-    for lb in LABELS:
-        acc = np.mean(results[lb]["acc"])
-        sw = np.mean(results[lb]["sw_acc"])
-        a = results[lb].get("anomalies", 0)
-        print(f"  {lb:<20} {acc:>9.1%} {sw:>11.1%} {a:>10}")
-    print(f"  {'='*60}")
+    # 汇总表
+    print(f"\n  {'='*80}")
+    print(f"  {'City':<12}", end="")
+    for lb in ABLATION_LABELS:
+        print(f" {lb:<12}", end="")
+    print(f"\n  {'-'*80}")
+    for city in CITIES:
+        if city in all_results:
+            row = f"  {city:<12}"
+            for lb in ABLATION_LABELS:
+                row += f" {np.mean(all_results[city][lb]):<11.1%}"
+            print(row)
     
-    n_sw = len(sp)
-    n_an = results["5D-Complete"]["anomalies"]
-    print(f"\n  Switches: {n_sw} real, {n_an} anomalies detected")
-    
-    plot_results(results, ph, sp, twl)
+    # 消融贡献
+    print(f"\n  消融因果链 (Beijing):")
+    bj = all_results.get("beijing", {})
+    if bj:
+        complete = np.mean(bj["5D-Complete"])
+        for name, lb in [("温度缩放", "5D-NoTemp"), ("结构化先验", "5D-NoPrior"),
+                          ("加权更新", "5D-NoWeight"), ("异常检测", "5D-NoAnomaly")]:
+            val = np.mean(bj[lb])
+            print(f"    -{name}: {val:.1%} (Δ={complete-val:+.1%})")
+
 
 if __name__ == "__main__":
     main()
