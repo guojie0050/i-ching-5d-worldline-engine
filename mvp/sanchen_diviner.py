@@ -289,7 +289,7 @@ class SanchenDiviner:
                 return '防守', '低', f'平衡型，三陈全分歧，全面防守'
     
     def fourth_chen_zongcuo(self, hexagram):
-            """第四陈: 综错推演 — 只看向综卦和错卦, 不关心体用时位卦变"""
+        """第四陈: 综错推演 — 只看综卦和错卦, 不关心体用时位卦变"""
         zong = hexagram.get('zong_idx'); cuo = hexagram.get('cuo_idx')
         wx = self.wuxing
         

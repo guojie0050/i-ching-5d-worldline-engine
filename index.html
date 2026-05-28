@@ -40,7 +40,7 @@
 </div>
 
 <script>
-fetch('data/prediction_history.json')
+fetch("data/prediction_history.json")
   .then(r => r.json())
   .then(data => {
     if (!data.length) return;
