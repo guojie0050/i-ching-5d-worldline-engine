@@ -119,8 +119,22 @@
 | 5×5 (Ben+Hu+Bian+Zong+Cuo, 10yr) | 72% | V17 |
 | 3×3 (20yr) | 72% | V18 |
 | 5×5 (20yr) | 74% | V18 |
-| **5×5 + Yao-Ci + Temporal (20yr)** | **76%** | **V18** |
+| **5D×Sanchen Consensus (worldline switch)** | **2455 harvest** | **V27** |
 
+
+
+## 🔮 实时甲骨文预测系统
+
+基于本项目核心架构，衍生了两个独立的小时级天气预测系统：
+
+| 项目 | 仓库 | 随机源 | 状态 |
+|------|------|--------|------|
+| JPL 行星版 | `guojie0050/yijing_realtime_oracle` | NASA JPL 木星/地球黄经坐标 | 每小时 cron 运行中 |
+| 内部熵池版 | `guojie0050/internal_oracle` | `os.urandom()` 硬件量子噪声 | 每小时 cron 运行中 |
+
+两个版本使用相同的大衍筮法 + 三陈推演 + 五人共识 + 贝叶斯更新，唯一变量是随机源。持续对比中。
+
+---
 
 ## 项目结构
 
