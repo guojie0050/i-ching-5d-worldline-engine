@@ -324,13 +324,11 @@ class SanchenDiviner:
         else:
             return {'decision': '防守', 'reason': '综卦错卦皆不利，逆向验证不通过'}
     
-    def consult(self, hexagram, use_fourth=False):
     def fourth_chen_zongcuo(self, hexagram):
-            """第四陈: 综错推演 — 只看向综卦和错卦, 不关心体用时位卦变"""
+        """第四陈: 综错推演 — 只看综卦和错卦"""
         zong = hexagram.get('zong_idx'); cuo = hexagram.get('cuo_idx')
         wx = self.wuxing
         
-        # 综卦分析: 上下颠倒后的五行关系
         if zong is not None:
             h_zong = HEXAGRAMS[zong]
             zong_shang, zong_xia = h_zong[2], h_zong[3]
@@ -341,7 +339,6 @@ class SanchenDiviner:
         else:
             zong_good = True
         
-        # 错卦分析: 阴阳全反后的五行关系
         if cuo is not None:
             h_cuo = HEXAGRAMS[cuo]
             cuo_shang, cuo_xia = h_cuo[2], h_cuo[3]
@@ -353,14 +350,47 @@ class SanchenDiviner:
             cuo_good = True
         
         if zong_good and cuo_good:
-            return {'decision': '进取', 'reason': '综卦错卦皆有利，反向视角也支持'}
+            return {'decision': '进取', 'reason': '综卦错卦皆有利'}
         elif zong_good and not cuo_good:
-            return {'decision': '保守', 'reason': '综卦有利但错卦示警，正面可行反面有隐患'}
+            return {'decision': '保守', 'reason': '综卦有利但错卦示警'}
         elif not zong_good and cuo_good:
             return {'decision': '保守', 'reason': '综卦不利但错卦反向有利'}
         else:
-            return {'decision': '防守', 'reason': '综卦错卦皆不利，逆向验证不通过'}
+            return {'decision': '防守', 'reason': '综卦错卦皆不利'}
     
+    def consult(self, hexagram, use_fourth=False):
+        c1 = self.first_chen_tiyong(hexagram)
+        c2 = self.second_chen_shiwei(hexagram)
+        c3 = self.third_chen_guabian(hexagram)
+        
+        if use_fourth:
+            c4 = self.fourth_chen_zongcuo(hexagram)
+            decisions = [c1['decision'], c2['decision'], c3['decision'], c4['decision']]
+        else:
+            decisions = [c1['decision'], c2['decision'], c3['decision']]
+        
+        vote = {}
+        for d in decisions: vote[d] = vote.get(d, 0) + 1
+        max_v = max(vote.values())
+        n_chen = len(decisions)
+        
+        if max_v == n_chen:
+            final = decisions[0]; conf = '高'
+            note = f'{n_chen}陈一致({final})'
+        else:
+            final, conf, note = self._apply_style_bias(decisions, c1, c2, c3)
+            self.disagreement_count += 1
+        
+        self.log.append({
+            'recommendation': '旱稻' if final in ('防守','保守') else '水稻',
+            'sanchen_decision': final, 'confidence': conf,
+            'consensus_note': note,
+            'chen1': c1, 'chen2': c2, 'chen3': c3,
+        })
+        if use_fourth: self.log[-1]['chen4'] = c4
+        
+        r = self.log[-1]
+        return r
     def consult(self, hexagram, use_fourth=False):
         """主接口: 三陈推演 + 内部共识"""
         self.total_consults += 1
