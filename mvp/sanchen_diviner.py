@@ -240,11 +240,46 @@ class SanchenDiviner:
             return {'decision': '防守', 'reason': '互卦不利+变卦恶化，全面防守'}
     
     def _apply_style_bias(self, decisions, c1, c2, c3):
-        """认知风格介入：仅在三陈分歧时生效"""
+        """概率化分歧处理 — Strubbe 隐藏变量阈值逻辑
+        
+        不再硬性降级，而是基于三陈各自的 EMA 准确率计算优势比。
+        当多数派准确率显著高于少数派时（ratio > r * threshold），
+        采纳多数派；否则保守降级。threshold_factor 控制保守程度。
+        """
+        import random
+        threshold_factor = 2.0  # 越大越保守, 越小越激进
+        
         vote = {}
         for d in decisions: vote[d] = vote.get(d, 0) + 1
         max_v = max(vote.values())
         
+        # 确定多数派和少数派
+        majority = max(vote, key=vote.get)
+        minority = [d for d in vote if d != majority]
+        
+        # 获取多数派和少数派各维度的 EMA 准确率
+        acc_names = ['体用', '时位', '卦变']
+        majority_accs = []
+        minority_accs = []
+        for i, d in enumerate(decisions):
+            if d == majority: majority_accs.append(self.display_acc[i])
+            else: minority_accs.append(self.display_acc[i])
+        
+        # 概率化决策
+        r = random.random()  # [0, 1)
+        ratio = max(majority_accs) / max(minority_accs) if minority_accs and max(minority_accs) > 0 else 2.0
+        
+        if ratio > r * threshold_factor:
+            # 多数派显著占优 → 采纳
+            return majority, '中', f'概率采纳: ratio={ratio:.2f}>r*{threshold_factor}={r*threshold_factor:.2f}, 多数派={majority}(acc={max(majority_accs):.1%})'
+        else:
+            # 优势不够 → 保守降级
+            downgrade = {'进取':'保守','保守':'防守','防守':'防守','常规':'保守'}
+            downgraded = downgrade.get(majority, majority)
+            return downgraded, '低', f'概率降级: ratio={ratio:.2f}≤r*{threshold_factor}={r*threshold_factor:.2f}, {majority}→{downgraded}'
+        
+        # (以下保留旧风格分支用于具名风格)
+        # If using named cognitive styles, fall through to old logic
         style = self.cognitive_style
         
         if style == 'conservative':

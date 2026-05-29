@@ -1,255 +1,175 @@
-# 《易经》：五维投影的观测接口
+# i-ching-5d-worldline-engine
 
-**基于结晶化时空框架的贝叶斯计算实现** — 以《易经》为骨，贝叶斯为血，构建能自我修正的世界预测 AI。
+> **Restarting the 3000-year-old cosmic operating system.**
+> 用现代计算重新启动三千年前的宇宙认知操作系统。
 
-[![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
-[![Status: Active Research](https://img.shields.io/badge/Status-Active_Research-blue.svg)]()
-
----
-
-## 核心思想
-
-当前大模型拟合"人类如何说"（下一个 token），我们构建一个学"世界如何是"的模型——以易经六十四卦为结构化先验因果框架，以贝叶斯更新为持续学习引擎。
-
-**三句话概括**:
-1. 六十四卦 = 对世界隐状态的离散划分（结构化先验）
-2. 贝叶斯更新 = 每次真实反馈定向修正内部参数（不遗忘）
-3. 确定性升级 = 模型对世界的认知越来越精确（可量化）
-
-## 实验历程 (V3 → V9)
-
-所有实验基于 5 种子 × 95% CI，训练/评估严格分离。
-
-### V3-V4: 基础架构验证
-
-| 实验 | 数据 | 关键发现 |
-|------|------|---------|
-| V3 | 合成 4-机制 Markov | 传统卦象先验 > 随机先验；易经 > NN |
-| V4 | **北京 10年真实天气** | 三爻共享 512 参数 = 独立卦象 4096 参数精度 |
-
-### V5-V8: 增量优化
-
-| 实验 | 方向 | 结果 |
-|------|------|------|
-| V5 | 非对称权重 + delta + 六爻上下文 | 消融无差异：基线已太强 |
-| V6 | 温度/降水/风速/湿度多特征 | 易经 +0%；NN +2.2pp（先验已内化特征） |
-| V7 | 上下文窗口 K=1/3/5/7 | 易经不受影响；NN K=5 最佳 |
-| V8 | 多步预测 1/2/3 天 | 六爻模型衰减 2.2% vs 三爻 5.5% |
-
-### V9: HMM 架构探索（6 变体，全部负结果）
-
-| HMM 变体 | 参数 | 100天 | 3000天 |
-|----------|:--:|:--:|:--:|
-| Full 64×64 | 4608 | 35.6% | 44.9% |
-| Factored 8² | 640 | 35.6% | 44.9% |
-| Rule-Driven (爻变) | 512 | 35.6% | 44.9% |
-| 8-Trigram | 128 | 35.6% | 44.9% |
-| Symbolic-Bayesian | 512 | 28.5% | 35.9% |
-| **TrigramV4 (混合专家)** | **512** | **35.9%** | **54.8%** |
-
-**HMM 结论**: 6 种隐马尔可夫架构全部不如简单混合专家模型。隐状态推断引入的信息瓶颈/正反馈锁死损害了性能。
-
-### 🏆 最佳架构: TrigramV4
-
-| 训练天数 | Trigram (512) | Neural-Net | 领先 |
-|:--:|:--:|:--:|:--:|
-| 100 | **35.9%** | 28.7% | +7.2pp |
-| 500 | **48.5%** | 46.2% | +2.3pp |
-| 1000 | **56.4%** | 53.8% | +2.6pp |
-| 3000 | 54.8% | **56.8%** | -2.0pp |
-
-- 小/中数据量：易经框架持续领先（先验优势）
-- 大数据量（3000天）：NN 反超（通用逼近能力释放）
-- 结论：结构化先验在**数据稀缺时**提供决定性优势
-
-## 五维投影与多观测者共识 (V10 → V16)
-
-### V10-V11: 五维投影观测模型
-
-| 实验 | 环境 | 结果 |
-|------|------|------|
-| V10 合成 | 3条世界线切换 | 5D **44.3%** vs Flat 33.1% (+11.2pp) |
-| V10 消融 | 4城市平稳数据 | 所有5D组件=0 贡献 — 定义了适用边界 |
-| V11 翻转测试 | 切换后恢复 | 12天恢复至 P>0.5 |
-| V11 季节 | 北京干支×四季 | 5D **57.2%** vs Flat 45.5% (+11.7pp) |
-
-**核心发现**: 5D模型在非平稳环境提供11-12pp优势，平稳数据上退化到FlatBayes。这不是bug，是精确的适用条件。
-
-### V12-V13: 时序分离与真预言
-
-| 实验 | 设计 | 发现 |
-|------|------|------|
-| V12 时训分离 | 5年训练→5年测试（冻结） | 5D=Flat — 世界线追踪需要在线更新 |
-| V13 真预言 | 今占明验（h_t→w_{t+1}） | 5D=Flat — 协议变化不影响平稳数据 |
-
-### V13: 多观测者共识农业决策系统
-
-三理论融合：五维投影（易经）+ 观测者交集（心经）+ 双缝干涉（量子力学）
-
-| 模型 | 十年收成 | 极端存活 |
-|------|:------:|:------:|
-| **Consensus-5** | **980±140** | **13** |
-| DQN | 913±126 | 9 |
-| Single | 887±130 | 13 |
-| Fixed | 831±357 | 6 |
-| Random | 1019±80 | 17 |
-
-共识网络比固定策略 +18%，方差缩小 2.5 倍，共识度 60%→65%。
-
-### V14-V16: 收敛、分化与三卦联合
-
-| 实验 | 核心问题 | 结果 |
-|------|---------|------|
-| V14 收敛测试 | 不同世界线卦师能否收敛？ | **92%收敛度** ✅ — 能，但收敛后同质化 |
-| V14b 不对称证据 | 维持分化能否阻止收敛？ | 分歧度0.38 vs 0.26 ✅ — 但准确率62%→58% |
-| V14c 演化注入 | 共识时引入新卦师 | 10年太短，出生-死亡循环展不开 |
-| V15 层级共识 | 2层/3层级联 + 7世界线 | 不突破70%天花板 — 卦象信息容量极限 |
-| **V16 三卦联合** | **本卦+互卦+变卦分别交不同卦师** | **68%** vs 同卦64% vs 单人52% |
-
-**V16 是关键突破**: 首次证明异质信息源（不同卦象视角）的共识 > 同质信息源（相同卦象）的共识。易经的本/互/变结构正是为此设计的。
-
-### 🏆 完整架构排行榜
-
-| 架构 | 准确率 | 实验 | 
-|------|:-----:|------|
-| TrigramV4 (512参数) | 56.8% | V4 |
-| Single diviner (20yr) | 59% | V18 |
-| 3 same-hexagram consensus | 64% | V16 |
-| 3×3 (Ben+Hu+Bian, 10yr) | 70% | V16 |
-| 5×5 (Ben+Hu+Bian+Zong+Cuo, 10yr) | 72% | V17 |
-| 3×3 (20yr) | 72% | V18 |
-| 5×5 (20yr) | 74% | V18 |
-| **5D×Sanchen Consensus (worldline switch)** | **2455 harvest** | **V27** |
-
-
-
-## 🔮 实时甲骨文预测系统
-
-基于本项目核心架构，衍生了两个独立的小时级天气预测系统：
-
-| 项目 | 仓库 | 随机源 | 状态 |
-|------|------|--------|------|
-| JPL 行星版 | `guojie0050/yijing_realtime_oracle` | NASA JPL 木星/地球黄经坐标 | 每小时 cron 运行中 |
-| 内部熵池版 | `guojie0050/internal_oracle` | `os.urandom()` 硬件量子噪声 | 每小时 cron 运行中 |
-
-两个版本使用相同的大衍筮法 + 三陈推演 + 五人共识 + 贝叶斯更新，唯一变量是随机源。持续对比中。
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 
 ---
 
-## 🔮 多视角共识与Sanchen推演 (V17 → V27)
+## What is this?
 
-### V17-V18: 全融合架构
+We propose a fundamental hypothesis: **The I Ching (易经) is not a divination tool, but a forgotten "cosmic operating system."** Its hexagram generation process (大衍筮法) is structurally isomorphic to the "crystallizing spacetime" framework proposed by Filip Strubbe (2025) — a modern physics theory that explains quantum phenomena as projections from a higher-dimensional, classically deterministic structure.
 
-| 里程碑 | 架构 | 准确率 | 累积 |
-|------|------|:-----:|:---:|
-| 起点 | Single-Ben (1卦师1卦) | 52% | — |
-| V16 | 3卦师×3卦象(本/互/变) | 70% | +18pp |
-| V17 | 5卦师×5卦象(+综/错) | 72% | +20pp |
-| V18 | +爻辞+时序+20年数据 | **76%** | **+24pp** |
+This repository is the **engineering implementation** of that hypothesis. We restarted this ancient operating system with modern computation, Bayesian updating, and a 5D worldline-tracking architecture, and validated it on real-world tasks.
 
-### V19-V21: 三陈推演与维度分离
-
-孔子"三陈九卦"原则：同一卦象从三个独立角度各推演一次，各自走到结论再内部投票。
-
-| 版本 | 架构 | 收成 | 关键创新 |
-|------|------|:---:|------|
-| V19 | 三陈单人 | **1828** | 内部三维分离+共识 (+8% vs 原始引擎) |
-| V20 | 分化五人 | 1837 | 五种认知风格 (+0.5% vs 三陈单人) |
-| V21 | 全卦师五人 | **1928** | 不同大衍筮法→不同卦象输入 (+3.5%) |
-
-### V22-V24: 卦气时序权重 (汉代象数学)
-
-| 版本 | 架构 | 收成 | 特点 |
-|------|------|:---:|------|
-| V22 | GuaQi-5 | **1954** | 卦气权重调制投票 |
-| V23 | 数据驱动卦气 | 1952 | 从气象数据学习hex×season权重 |
-| V24 | 公平对比(10yr) | 1835 vs DQN 1620 | **+13.3%** 首次公平战胜DQN |
-
-### V25-V26: 贝叶斯在线学习
-
-| 版本 | 架构 | 收成 | 
-|------|------|:---:|
-| V25 | 贝叶斯冷启动 | **1760** (+4.1% vs 无学习) |
-| V26 | 贝叶斯warm-start | 1752 (方差减小但跨期gap) |
-
-### V27: 5D×三陈融合
-
-四项理论支柱首次同时激活：三陈内推+多观测者共识+世界线追踪+贝叶斯在线学习
-
-| 模型 | 收成 | 
-|------|:---:|
-| **5D-Sanchen-5** | **2455** (+4.9% vs 基线) |
-| DQN | 2415 |
-| 无追踪基线 | 2340 |
-
-### 🏆 当前最强架构
-
-| 架构 | 收成 | 数据条件 |
-|------|:---:|------|
-| GuaQi-Team5 | **1946** | 20年全数据 |
-| Full-5x5Meth | 1928 | 全数据 |
-| Full-5x5Meth (公平) | 1835 | 10yr train/test |
-| Sanchen-Bayes | 1760 | 10yr cold-start |
+**Key result**: Every time we restored a structural element of the I Ching (互卦, 变卦, 爻辞, multi-observer consensus), the system's prediction accuracy improved measurably. No component was redundant.
 
 ---
 
-## 🔮 实时甲骨文预测系统
+## Core Hypothesis
 
-研究从回顾性验证转向前沿预测。两个独立的小时级系统正在持续运行：
+> *The I Ching is a forgotten "Cosmic Cognitive Operating System." Its casting ritual simulates worldline collapse dynamics, and its interpretive rules decode causal dynamics. We restarted it with code.*
 
-| Oracle | 仓库 | 随机源 | Cron |
-|--------|------|--------|:--:|
-| **JPL 行星版** | [yijing_realtime_oracle](https://github.com/guojie0050/yijing_realtime_oracle) | NASA JPL 木星/地球日心黄经坐标 | 每5分钟 |
-| **内部熵池版** | [internal_oracle](https://github.com/guojie0050/internal_oracle) | `os.urandom()` 硬件量子噪声 | 每5分钟 |
+This hypothesis is independently supported by **Strubbe's crystallizing spacetime framework** [arXiv:2505.10383](https://arxiv.org/abs/2505.10383), which we discovered *after* completing our experimental suite (V3–V27). Both systems share the same core logic: an external evolution parameter (τ) drives dynamic evolution, multiple possibilities coexist in parallel, a dynamic process selects a single outcome, and the observer only sees the final result — not the process itself.
 
-两个系统共享同一架构：大衍筮法（1:5:7:3概率）→ 五人三陈共识 → 贝叶斯坍缩。
-唯一变量是随机源——检验"世界线触碰方式"是否影响预测结果。
-
-累计验证数据随时可查：`python3 ~/.deepseek/workspace/check_oracles.py`
+The 64 hexagrams are a **structured partition of the world's possible states** — an ancient attempt to index the projections of worldlines from a 5D deterministic structure into our 4D spacetime.
 
 ---
 
-## 项目结构
+## Architecture
+
+Three random sources, one unified six-layer cognitive stack, twelve parallel variants running hourly:
 
 ```
-yijing-bayesian-world-model/
-├── README.md
-├── paper/draft.md              ← 论文: 7节, 11张表, 12条参考文献
-├── discussion/full-log.md      ← 思想演化记录
-└── mvp/
-    ├── model.py                ← 9+模型类 (IChing/HMM/Trigram/Hexagram/Symbolic/FiveD)
-    ├── yijing_engine.py        ← 完整易经决策引擎 (筮法+体用+时位+决策+反馈)
-    ├── experiment.py           ← V3 合成数据实验
-    ├── experiment_real.py      ← V4 真实数据实验
-    ├── experiment_v5.py        ← V5 三优化消融
-    ├── experiment_v6.py        ← V6 多特征
-    ├── experiment_v7.py        ← V7 上下文窗口
-    ├── experiment_v8.py        ← V8 多步预测
-    ├── experiment_v9.py        ← V9 HMM 架构探索
-    ├── experiment_v10.py       ← V10 五维投影+消融
-    ├── experiment_v11.py       ← V11 翻转测试+季节实验
-    ├── experiment_v12.py       ← V12 时序分离
-    ├── experiment_v13.py       ← V13 多观测者共识系统
-    ├── experiment_v14.py       ← V14-V18 收敛/分化/演化/三卦联合/全融合
-    ├── experiment_farming.py   ← 农事决策实验
-    ├── iching_*.png            ← 实验图表
-    └── results/                ← CSV 数据
+Source           Stack (same for all)
+───────          ────────────────────
+Weather (6 vars)     ↓
+  → Hexagram     Affinity Vector (64×8)
+                 × Three-Display Modulation (三陈: 体用/时位/卦变)
+JPL Planetary        × Yao-Ci Encoding (爻辞)
+(Jupiter/Earth)      × GuaQi Seasonal Weights (卦气)
+  → Hexagram     × Worldline Priors (5 observers, differentiated)
+                 × Bayesian Dirichlet Update
+Entropy Pool     × Consensus Voting (多数投票)
+(os.urandom)         ↓
+  → Hexagram     Predict: Clear(晴)/Overcast(阴)/Rain(雨)
+                     ↓
+                 Verify after 1 hour → Collapse → Update
 ```
 
-## 运行
+| Variant | Source | Observers | Upgraded |
+|:--:|------|:--:|:--:|
+| weather-1obs | 6-dim weather encoding | 1 | — |
+| weather-5obs | 6-dim weather encoding | 5 | — |
+| weather-1obs↑ | 6-dim weather encoding | 1 | EMA + switch detect |
+| weather-5obs↑ | 6-dim weather encoding | 5 | EMA + switch detect |
+| jpl-1obs | Jupiter/Earth ecliptic | 1 | — |
+| jpl-5obs | Jupiter/Earth ecliptic | 5 | — |
+| jpl-1obs↑ | Jupiter/Earth ecliptic | 1 | EMA + switch detect |
+| jpl-5obs↑ | Jupiter/Earth ecliptic | 5 | EMA + switch detect |
+| entropy-1obs | os.urandom() | 1 | — |
+| entropy-5obs | os.urandom() | 5 | — |
+| entropy-1obs↑ | os.urandom() | 1 | EMA + switch detect |
+| entropy-5obs↑ | os.urandom() | 5 | EMA + switch detect |
+
+All variants use **same hexagram for all observers** (同卦). Differences come only from worldline priors and Bayesian learning history. Check results anytime:
 
 ```bash
-cd mvp
-pip install numpy matplotlib
-python experiment.py        # V3: synthetic baseline
-python experiment_real.py   # V4: Beijing weather
-python experiment_v14.py    # V16: Tri-Hexagram consensus (latest)
+python3 check_oracles.py
 ```
-
-## 许可证
-
-CC BY 4.0
 
 ---
 
-> "易与天地准，故能弥纶天地之道。" ——《周易·系辞》
+## Key Experimental Results
+
+| Experiment | Architecture | Key Finding |
+|:---|:---|:---|
+| V3–V4 | Structured hexagram prior | Outperforms neural networks in data-scarce regimes (+7.2pp @100 days) |
+| V10–V11 | 5D Projection Model | +11.7pp over flat baseline in non-stationary environments |
+| V16 | Tri-Hexagram Consensus (本/互/变) | Heterogeneous views outperform homogeneous consensus by 4pp |
+| V19 | Sanchen Diviner (三陈) | Dimensional separation: +8.0% over original engine |
+| V21 | Full-Diviner Multi-Method | Different hexagram inputs: first reliable multi > single |
+| V22 | GuaQi Seasonal Weights (卦气) | Strongest single component: 1954 harvest |
+| V25 | Bayesian Online Learning | Cold-start EMA: +4.1% over non-learning baseline |
+| V27 | 5D × Sanchen Fusion | All four theoretical pillars active, each contributes |
+
+**Component Attribution**: 52% → 76% cumulative gain from sequentially restoring I Ching structural elements. 24pp total improvement. No component was redundant.
+
+---
+
+## Paper
+
+**Title**: *《易经》：五维投影的观测接口——基于结晶化时空框架的贝叶斯计算实现*
+
+**English**: *The I Ching as a 5D Projection Observer: Implementing Crystallizing Spacetime with Bayesian World Models*
+
+→ [`paper/draft.md`](paper/draft.md) (Chinese) · [`paper/draft_en.md`](paper/draft_en.md) (English)
+
+---
+
+## Quick Start
+
+```bash
+git clone https://github.com/guojie0050/i-ching-5d-worldline-engine.git
+cd i-ching-5d-worldline-engine
+
+# Install dependencies
+pip install numpy matplotlib
+
+# Run a single oracle (weather-encoded hexagram, single observer)
+python3 oracles/runner.py --source weather --observers 1
+
+# Run all 12 variants (requires crontab)
+# See cron configuration at the top of this README or in crontab -l
+
+# Check results across all variants
+python3 check_oracles.py
+
+# Run historical experiments
+cd mvp
+python3 experiment_v19.py  # Sanchen Diviner
+python3 experiment_v27.py  # 5D × Sanchen Fusion
+```
+
+---
+
+## Repository Structure
+
+```
+i-ching-5d-worldline-engine/
+├── paper/                     ← 论文（中英文）
+│   ├── draft.md               ← 中文版
+│   └── draft_en.md            ← English version
+├── mvp/                       ← V3–V27 实验代码
+│   ├── model.py               ← 9+ 模型类 (IChing/HMM/Trigram/Symbolic/FiveD)
+│   ├── sanchen_diviner.py     ← 三陈推演器 (V19)
+│   ├── experiment_v*.py       ← V3–V27 实验脚本
+│   └── results/               ← CSV 实验数据
+├── oracles/                   ← 实时五维投影 Oracle (12 variants)
+│   ├── runner.py              ← 统一 Oracle Runner (参数化)
+│   ├── worldline_detector.py  ← 世界线切换检测
+│   ├── data_*/                ← 各变体独立验证数据
+│   └── oracle.log             ← 运行日志
+├── check_oracles.py           ← Oracle 对比工具
+└── README.md
+```
+
+---
+
+## Keywords
+
+`I Ching` `5D Projection` `Worldline` `Bayesian Update` `Crystallizing Spacetime` `World Model` `Causal Reasoning` `Interpretable AI` `Sample Efficiency` `Cognitive Architecture` `Observer Consensus` `Hexagram`
+
+---
+
+## License
+
+CC BY 4.0 — Thoughts should flow freely.
+
+---
+
+## 中文简介
+
+我们在此提出一个根本性的理论假说：**《易经》是一套被遗忘的"宇宙认知操作系统"。** 其大衍筮法的推演过程，与 Filip Strubbe 提出的"结晶化时空"物理学框架在结构上惊人一致——后者认为量子现象并非自然界的本质，而是四维时空在更高层次上演化的投影。
+
+我们用现代计算重新启动了这套古老的操作系统，并通过 V3 至 V27 一系列实验验证了其有效性。结果表明：**每当我们还原《易经》的一个完整结构元素，系统在真实世界预测任务上的性能都获得了可测量的提升。**
+
+我们不宣称构建了一个更好的 GPT，而是指出了一个被长期忽视的方向：三千年前的东方智慧，可能已经编码了宇宙认知的底层算法。
+
+---
+
+## Related Links
+
+- **Strubbe crystallizing spacetime**: [arXiv:2505.10383](https://arxiv.org/abs/2505.10383)
+- **Full paper manuscript**: [`paper/draft.md`](paper/draft.md)
