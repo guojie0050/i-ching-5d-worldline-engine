@@ -407,3 +407,449 @@ urllib.error.HTTPError: HTTP Error 502: Bad Gateway
 [2026-05-30 04:40] entropy-1obs 验证: 晴 vs 晴 ✓ | 13/20=65%
 [2026-05-30 04:45] entropy-5obs: 晴 (共识5/5) | 晴 晴 晴 晴 晴
 [2026-05-30 04:45] entropy-5obs 验证: 晴 vs 晴 ✓ | 11/18=61%
+[2026-05-30 04:50] entropy_up-5obs: 晴 (共识5/5) | 晴 晴 晴 晴 晴
+[2026-05-30 04:50] entropy_up-5obs 验证: 晴 vs 晴 ✓ | 13/19=68%
+[2026-05-30 04:55] entropy_up-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 04:55] entropy_up-1obs 验证: 晴 vs 晴 ✓ | 10/19=53%
+Traceback (most recent call last):
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 152, in <module>
+    seed,aux1,aux2=get_seed(source)
+                   ^^^^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 112, in get_seed
+    elif source=='weather':hx,dy=weather_hex();return hx,dy,0
+                                 ^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 86, in weather_hex
+    c = json.loads(urllib.request.urlopen(url, timeout=5).read())['current']
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 216, in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 525, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 502: Bad Gateway
+[2026-05-30 05:05] weather-5obs: 雨 (共识3/5) | 阴 雨 雨 阴 雨
+[2026-05-30 05:05] weather-5obs 验证: 雨 vs 晴 ✗ | 0/2=0%
+[2026-05-30 05:10] weather_up-1obs: 阴 (共识1/1) | 阴
+[2026-05-30 05:10] weather_up-1obs 验证: 阴 vs 晴 ✗ | 0/2=0%
+[2026-05-30 05:15] weather_up-5obs: 雨 (共识3/5) | 阴 雨 雨 阴 雨
+[2026-05-30 05:15] weather_up-5obs 验证: 雨 vs 晴 ✗ | 0/3=0%
+[2026-05-30 05:20] jpl-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 05:20] jpl-1obs 验证: 晴 vs 晴 ✓ | 15/21=71%
+[2026-05-30 05:25] jpl-5obs: 雨 (共识5/5) | 雨 雨 雨 雨 雨
+[2026-05-30 05:25] jpl-5obs 验证: 雨 vs 晴 ✗ | 12/22=55%
+[2026-05-30 05:30] jpl_up-5obs: 阴 (共识5/5) | 阴 阴 阴 阴 阴
+[2026-05-30 05:30] jpl_up-5obs 验证: 阴 vs 晴 ✗ | 14/22=64%
+[2026-05-30 05:35] jpl_up-1obs: 阴 (共识1/1) | 阴
+[2026-05-30 05:35] jpl_up-1obs 验证: 阴 vs 晴 ✗ | 16/22=73%
+[2026-05-30 05:40] entropy-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 05:40] entropy-1obs 验证: 晴 vs 晴 ✓ | 14/21=67%
+[2026-05-30 05:45] entropy-5obs: 晴 (共识3/5) | 晴 阴 雨 晴 晴
+[2026-05-30 05:45] entropy-5obs 验证: 晴 vs 晴 ✓ | 12/19=63%
+[2026-05-30 05:50] entropy_up-5obs: 晴 (共识3/5) | 晴 阴 阴 晴 晴
+[2026-05-30 05:50] entropy_up-5obs 验证: 晴 vs 晴 ✓ | 14/20=70%
+[2026-05-30 05:55] entropy_up-1obs: 阴 (共识1/1) | 阴
+[2026-05-30 05:55] entropy_up-1obs 验证: 阴 vs 晴 ✗ | 10/20=50%
+Traceback (most recent call last):
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 152, in <module>
+    seed,aux1,aux2=get_seed(source)
+                   ^^^^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 112, in get_seed
+    elif source=='weather':hx,dy=weather_hex();return hx,dy,0
+                                 ^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 86, in weather_hex
+    c = json.loads(urllib.request.urlopen(url, timeout=5).read())['current']
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 216, in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 525, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 502: Bad Gateway
+[2026-05-30 06:05] weather-5obs: 雨 (共识3/5) | 阴 雨 雨 阴 雨
+[2026-05-30 06:05] weather-5obs 验证: 雨 vs 晴 ✗ | 0/3=0%
+[2026-05-30 06:10] weather_up-1obs: 阴 (共识1/1) | 阴
+[2026-05-30 06:10] weather_up-1obs 验证: 阴 vs 晴 ✗ | 0/3=0%
+[2026-05-30 06:15] weather_up-5obs: 雨 (共识3/5) | 阴 雨 雨 阴 雨
+[2026-05-30 06:15] weather_up-5obs 验证: 雨 vs 晴 ✗ | 0/4=0%
+[2026-05-30 06:20] jpl-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 06:20] jpl-1obs 验证: 晴 vs 晴 ✓ | 16/22=73%
+[2026-05-30 06:25] jpl-5obs: 雨 (共识5/5) | 雨 雨 雨 雨 雨
+[2026-05-30 06:25] jpl-5obs 验证: 雨 vs 晴 ✗ | 12/23=52%
+[2026-05-30 06:30] jpl_up-5obs: 阴 (共识5/5) | 阴 阴 阴 阴 阴
+[2026-05-30 06:30] jpl_up-5obs 验证: 阴 vs 晴 ✗ | 14/23=61%
+[2026-05-30 06:35] jpl_up-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 06:35] jpl_up-1obs 验证: 晴 vs 晴 ✓ | 17/23=74%
+[2026-05-30 06:40] entropy-1obs: 阴 (共识1/1) | 阴
+[2026-05-30 06:40] entropy-1obs 验证: 阴 vs 晴 ✗ | 14/22=64%
+[2026-05-30 06:45] entropy-5obs: 雨 (共识5/5) | 雨 雨 雨 雨 雨
+[2026-05-30 06:45] entropy-5obs 验证: 雨 vs 晴 ✗ | 12/20=60%
+[2026-05-30 06:50] entropy_up-5obs: 阴 (共识3/5) | 雨 阴 阴 雨 阴
+[2026-05-30 06:50] entropy_up-5obs 验证: 阴 vs 晴 ✗ | 14/21=67%
+[2026-05-30 06:55] entropy_up-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 06:55] entropy_up-1obs 验证: 晴 vs 晴 ✓ | 11/21=52%
+Traceback (most recent call last):
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 152, in <module>
+    seed,aux1,aux2=get_seed(source)
+                   ^^^^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 112, in get_seed
+    elif source=='weather':hx,dy=weather_hex();return hx,dy,0
+                                 ^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 86, in weather_hex
+    c = json.loads(urllib.request.urlopen(url, timeout=5).read())['current']
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 216, in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 525, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 502: Bad Gateway
+[2026-05-30 07:05] weather-5obs: 雨 (共识3/5) | 阴 雨 雨 阴 雨
+[2026-05-30 07:05] weather-5obs 验证: 雨 vs 晴 ✗ | 0/4=0%
+[2026-05-30 07:10] weather_up-1obs: 阴 (共识1/1) | 阴
+[2026-05-30 07:10] weather_up-1obs 验证: 阴 vs 晴 ✗ | 0/4=0%
+[2026-05-30 07:15] weather_up-5obs: 雨 (共识3/5) | 阴 雨 雨 阴 雨
+[2026-05-30 07:15] weather_up-5obs 验证: 雨 vs 晴 ✗ | 0/5=0%
+[2026-05-30 07:20] jpl-1obs: 阴 (共识1/1) | 阴
+[2026-05-30 07:20] jpl-1obs 验证: 阴 vs 晴 ✗ | 16/23=70%
+[2026-05-30 07:25] jpl-5obs: 阴 (共识5/5) | 阴 阴 阴 阴 阴
+[2026-05-30 07:25] jpl-5obs 验证: 阴 vs 晴 ✗ | 12/24=50%
+[2026-05-30 07:30] jpl_up-5obs: 阴 (共识5/5) | 阴 阴 阴 阴 阴
+[2026-05-30 07:30] jpl_up-5obs 验证: 阴 vs 晴 ✗ | 14/24=58%
+[2026-05-30 07:35] jpl_up-1obs: 雨 (共识1/1) | 雨
+[2026-05-30 07:35] jpl_up-1obs 验证: 雨 vs 晴 ✗ | 17/24=71%
+[2026-05-30 07:40] entropy-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 07:40] entropy-1obs 验证: 晴 vs 晴 ✓ | 15/23=65%
+[2026-05-30 07:45] entropy-5obs: 晴 (共识3/5) | 晴 晴 阴 晴 阴
+[2026-05-30 07:45] entropy-5obs 验证: 晴 vs 晴 ✓ | 13/21=62%
+[2026-05-30 07:50] entropy_up-5obs: 雨 (共识5/5) | 雨 雨 雨 雨 雨
+[2026-05-30 07:50] entropy_up-5obs 验证: 雨 vs 晴 ✗ | 14/22=64%
+[2026-05-30 07:55] entropy_up-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 07:55] entropy_up-1obs 验证: 晴 vs 晴 ✓ | 12/22=55%
+Traceback (most recent call last):
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 152, in <module>
+    seed,aux1,aux2=get_seed(source)
+                   ^^^^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 112, in get_seed
+    elif source=='weather':hx,dy=weather_hex();return hx,dy,0
+                                 ^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 86, in weather_hex
+    c = json.loads(urllib.request.urlopen(url, timeout=5).read())['current']
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 216, in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 525, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 502: Bad Gateway
+[2026-05-30 08:05] weather-5obs: 雨 (共识3/5) | 阴 雨 雨 阴 雨
+[2026-05-30 08:05] weather-5obs 验证: 雨 vs 晴 ✗ | 0/5=0%
+[2026-05-30 08:10] weather_up-1obs: 阴 (共识1/1) | 阴
+[2026-05-30 08:10] weather_up-1obs 验证: 阴 vs 晴 ✗ | 0/5=0%
+[2026-05-30 08:15] weather_up-5obs: 阴 (共识5/5) | 阴 阴 阴 阴 阴
+[2026-05-30 08:15] weather_up-5obs 验证: 阴 vs 晴 ✗ | 0/6=0%
+[2026-05-30 08:20] jpl-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 08:20] jpl-1obs 验证: 晴 vs 晴 ✓ | 17/24=71%
+[2026-05-30 08:25] jpl-5obs: 晴 (共识3/5) | 晴 雨 雨 晴 晴
+[2026-05-30 08:25] jpl-5obs 验证: 晴 vs 晴 ✓ | 13/25=52%
+[2026-05-30 08:30] jpl_up-5obs: 晴 (共识5/5) | 晴 晴 晴 晴 晴
+[2026-05-30 08:30] jpl_up-5obs 验证: 晴 vs 晴 ✓ | 15/25=60%
+[2026-05-30 08:35] jpl_up-1obs: 阴 (共识1/1) | 阴
+[2026-05-30 08:35] jpl_up-1obs 验证: 阴 vs 晴 ✗ | 17/25=68%
+[2026-05-30 08:40] entropy-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 08:40] entropy-1obs 验证: 晴 vs 晴 ✓ | 16/24=67%
+[2026-05-30 08:45] entropy-5obs: 阴 (共识3/5) | 晴 阴 阴 阴 晴
+[2026-05-30 08:45] entropy-5obs 验证: 阴 vs 晴 ✗ | 13/22=59%
+[2026-05-30 08:50] entropy_up-5obs: 晴 (共识3/5) | 阴 晴 晴 阴 晴
+[2026-05-30 08:50] entropy_up-5obs 验证: 晴 vs 晴 ✓ | 15/23=65%
+[2026-05-30 08:55] entropy_up-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 08:55] entropy_up-1obs 验证: 晴 vs 晴 ✓ | 13/23=57%
+Traceback (most recent call last):
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 152, in <module>
+    seed,aux1,aux2=get_seed(source)
+                   ^^^^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 112, in get_seed
+    elif source=='weather':hx,dy=weather_hex();return hx,dy,0
+                                 ^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 86, in weather_hex
+    c = json.loads(urllib.request.urlopen(url, timeout=5).read())['current']
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 216, in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 525, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 502: Bad Gateway
+[2026-05-30 09:05] weather-5obs: 阴 (共识5/5) | 阴 阴 阴 阴 阴
+[2026-05-30 09:05] weather-5obs 验证: 阴 vs 晴 ✗ | 0/6=0%
+[2026-05-30 09:10] weather_up-1obs: 阴 (共识1/1) | 阴
+[2026-05-30 09:10] weather_up-1obs 验证: 阴 vs 晴 ✗ | 0/6=0%
+[2026-05-30 09:15] weather_up-5obs: 阴 (共识5/5) | 阴 阴 阴 阴 阴
+[2026-05-30 09:15] weather_up-5obs 验证: 阴 vs 晴 ✗ | 0/7=0%
+[2026-05-30 09:20] jpl-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 09:20] jpl-1obs 验证: 晴 vs 晴 ✓ | 18/25=72%
+[2026-05-30 09:25] jpl-5obs: 阴 (共识5/5) | 阴 阴 阴 阴 阴
+[2026-05-30 09:25] jpl-5obs 验证: 阴 vs 晴 ✗ | 13/26=50%
+[2026-05-30 09:30] jpl_up-5obs: 雨 (共识5/5) | 雨 雨 雨 雨 雨
+[2026-05-30 09:30] jpl_up-5obs 验证: 雨 vs 晴 ✗ | 15/26=58%
+[2026-05-30 09:35] jpl_up-1obs: 雨 (共识1/1) | 雨
+[2026-05-30 09:35] jpl_up-1obs 验证: 雨 vs 晴 ✗ | 17/26=65%
+[2026-05-30 09:40] entropy-1obs: 雨 (共识1/1) | 雨
+[2026-05-30 09:40] entropy-1obs 验证: 雨 vs 晴 ✗ | 16/25=64%
+[2026-05-30 09:45] entropy-5obs: 晴 (共识3/5) | 阴 晴 晴 晴 阴
+[2026-05-30 09:45] entropy-5obs 验证: 晴 vs 晴 ✓ | 14/23=61%
+[2026-05-30 09:50] entropy_up-5obs: 晴 (共识3/5) | 阴 晴 晴 阴 晴
+[2026-05-30 09:50] entropy_up-5obs 验证: 晴 vs 晴 ✓ | 16/24=67%
+[2026-05-30 09:55] entropy_up-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 09:55] entropy_up-1obs 验证: 晴 vs 晴 ✓ | 14/24=58%
+Traceback (most recent call last):
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 152, in <module>
+    seed,aux1,aux2=get_seed(source)
+                   ^^^^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 112, in get_seed
+    elif source=='weather':hx,dy=weather_hex();return hx,dy,0
+                                 ^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 86, in weather_hex
+    c = json.loads(urllib.request.urlopen(url, timeout=5).read())['current']
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 216, in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 525, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 502: Bad Gateway
+[2026-05-30 10:05] weather-5obs: 晴 (共识2/5) | 晴 阴 雨 晴 雨
+[2026-05-30 10:05] weather-5obs 验证: 晴 vs 晴 ✓ | 1/7=14%
+[2026-05-30 10:10] weather_up-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 10:10] weather_up-1obs 验证: 晴 vs 晴 ✓ | 1/7=14%
+[2026-05-30 10:15] weather_up-5obs: 晴 (共识3/5) | 晴 晴 雨 晴 雨
+[2026-05-30 10:15] weather_up-5obs 验证: 晴 vs 晴 ✓ | 1/8=12%
+[2026-05-30 10:20] jpl-1obs: 雨 (共识1/1) | 雨
+[2026-05-30 10:20] jpl-1obs 验证: 雨 vs 晴 ✗ | 18/26=69%
+[2026-05-30 10:25] jpl-5obs: 晴 (共识5/5) | 晴 晴 晴 晴 晴
+[2026-05-30 10:25] jpl-5obs 验证: 晴 vs 晴 ✓ | 14/27=52%
+[2026-05-30 10:30] jpl_up-5obs: 晴 (共识5/5) | 晴 晴 晴 晴 晴
+[2026-05-30 10:30] jpl_up-5obs 验证: 晴 vs 晴 ✓ | 16/27=59%
+[2026-05-30 10:35] jpl_up-1obs: 雨 (共识1/1) | 雨
+[2026-05-30 10:35] jpl_up-1obs 验证: 雨 vs 晴 ✗ | 17/27=63%
+[2026-05-30 10:40] entropy-1obs: 阴 (共识1/1) | 阴
+[2026-05-30 10:40] entropy-1obs 验证: 阴 vs 晴 ✗ | 16/26=62%
+[2026-05-30 10:45] entropy-5obs: 雨 (共识5/5) | 雨 雨 雨 雨 雨
+[2026-05-30 10:45] entropy-5obs 验证: 雨 vs 晴 ✗ | 14/24=58%
+[2026-05-30 10:50] entropy_up-5obs: 阴 (共识5/5) | 阴 阴 阴 阴 阴
+[2026-05-30 10:50] entropy_up-5obs 验证: 阴 vs 晴 ✗ | 16/25=64%
+[2026-05-30 10:55] entropy_up-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 10:55] entropy_up-1obs 验证: 晴 vs 晴 ✓ | 15/25=60%
+Traceback (most recent call last):
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 152, in <module>
+    seed,aux1,aux2=get_seed(source)
+                   ^^^^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 112, in get_seed
+    elif source=='weather':hx,dy=weather_hex();return hx,dy,0
+                                 ^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 86, in weather_hex
+    c = json.loads(urllib.request.urlopen(url, timeout=5).read())['current']
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 216, in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 525, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 502: Bad Gateway
+[2026-05-30 11:05] weather-5obs: 晴 (共识2/5) | 晴 阴 雨 晴 雨
+[2026-05-30 11:05] weather-5obs 验证: 晴 vs 晴 ✓ | 2/8=25%
+[2026-05-30 11:10] weather_up-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 11:10] weather_up-1obs 验证: 晴 vs 晴 ✓ | 2/8=25%
+[2026-05-30 11:15] weather_up-5obs: 晴 (共识3/5) | 晴 晴 雨 晴 雨
+[2026-05-30 11:15] weather_up-5obs 验证: 晴 vs 晴 ✓ | 2/9=22%
+[2026-05-30 11:20] jpl-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 11:20] jpl-1obs 验证: 晴 vs 晴 ✓ | 19/27=70%
+[2026-05-30 11:25] jpl-5obs: 晴 (共识3/5) | 晴 晴 阴 晴 阴
+[2026-05-30 11:25] jpl-5obs 验证: 晴 vs 晴 ✓ | 15/28=54%
+[2026-05-30 11:30] jpl_up-5obs: 晴 (共识4/5) | 晴 晴 晴 晴 阴
+[2026-05-30 11:30] jpl_up-5obs 验证: 晴 vs 晴 ✓ | 17/28=61%
+[2026-05-30 11:35] jpl_up-1obs: 雨 (共识1/1) | 雨
+[2026-05-30 11:35] jpl_up-1obs 验证: 雨 vs 晴 ✗ | 17/28=61%
+[2026-05-30 11:40] entropy-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 11:40] entropy-1obs 验证: 晴 vs 晴 ✓ | 17/27=63%
+[2026-05-30 11:45] entropy-5obs: 晴 (共识4/5) | 晴 晴 阴 晴 晴
+[2026-05-30 11:45] entropy-5obs 验证: 晴 vs 晴 ✓ | 15/25=60%
+[2026-05-30 11:50] entropy_up-5obs: 雨 (共识5/5) | 雨 雨 雨 雨 雨
+[2026-05-30 11:50] entropy_up-5obs 验证: 雨 vs 晴 ✗ | 16/26=62%
+[2026-05-30 11:55] entropy_up-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 11:55] entropy_up-1obs 验证: 晴 vs 晴 ✓ | 16/26=62%
+Traceback (most recent call last):
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 152, in <module>
+    seed,aux1,aux2=get_seed(source)
+                   ^^^^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 112, in get_seed
+    elif source=='weather':hx,dy=weather_hex();return hx,dy,0
+                                 ^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 86, in weather_hex
+    c = json.loads(urllib.request.urlopen(url, timeout=5).read())['current']
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 216, in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 525, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 502: Bad Gateway
+[2026-05-30 12:05] weather-5obs: 晴 (共识2/5) | 晴 阴 雨 晴 雨
+[2026-05-30 12:05] weather-5obs 验证: 晴 vs 晴 ✓ | 3/9=33%
+[2026-05-30 12:10] weather_up-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 12:10] weather_up-1obs 验证: 晴 vs 晴 ✓ | 3/9=33%
+[2026-05-30 12:15] weather_up-5obs: 晴 (共识3/5) | 晴 晴 雨 晴 雨
+[2026-05-30 12:15] weather_up-5obs 验证: 晴 vs 晴 ✓ | 3/10=30%
+[2026-05-30 12:20] jpl-1obs: 阴 (共识1/1) | 阴
+[2026-05-30 12:20] jpl-1obs 验证: 阴 vs 晴 ✗ | 19/28=68%
+[2026-05-30 12:25] jpl-5obs: 阴 (共识5/5) | 阴 阴 阴 阴 阴
+[2026-05-30 12:25] jpl-5obs 验证: 阴 vs 晴 ✗ | 15/29=52%
+[2026-05-30 12:30] jpl_up-5obs: 晴 (共识5/5) | 晴 晴 晴 晴 晴
+[2026-05-30 12:30] jpl_up-5obs 验证: 晴 vs 晴 ✓ | 18/29=62%
+[2026-05-30 12:35] jpl_up-1obs: 雨 (共识1/1) | 雨
+[2026-05-30 12:35] jpl_up-1obs 验证: 雨 vs 晴 ✗ | 17/29=59%
+[2026-05-30 12:40] entropy-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 12:40] entropy-1obs 验证: 晴 vs 晴 ✓ | 18/28=64%
+[2026-05-30 12:45] entropy-5obs: 阴 (共识4/5) | 阴 阴 阴 阴 雨
+[2026-05-30 12:45] entropy-5obs 验证: 阴 vs 晴 ✗ | 15/26=58%
+[2026-05-30 12:50] entropy_up-5obs: 晴 (共识5/5) | 晴 晴 晴 晴 晴
+[2026-05-30 12:50] entropy_up-5obs 验证: 晴 vs 晴 ✓ | 17/27=63%
+[2026-05-30 12:55] entropy_up-1obs: 阴 (共识1/1) | 阴
+[2026-05-30 12:55] entropy_up-1obs 验证: 阴 vs 晴 ✗ | 16/27=59%
+Traceback (most recent call last):
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 152, in <module>
+    seed,aux1,aux2=get_seed(source)
+                   ^^^^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 112, in get_seed
+    elif source=='weather':hx,dy=weather_hex();return hx,dy,0
+                                 ^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 86, in weather_hex
+    c = json.loads(urllib.request.urlopen(url, timeout=5).read())['current']
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 216, in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 525, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 502: Bad Gateway
+[2026-05-30 13:05] weather-5obs: 晴 (共识2/5) | 晴 阴 雨 晴 雨
+[2026-05-30 13:05] weather-5obs 验证: 晴 vs 晴 ✓ | 4/10=40%
+[2026-05-30 13:10] weather_up-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 13:10] weather_up-1obs 验证: 晴 vs 晴 ✓ | 4/10=40%
+[2026-05-30 13:15] weather_up-5obs: 晴 (共识3/5) | 晴 晴 雨 晴 雨
+[2026-05-30 13:15] weather_up-5obs 验证: 晴 vs 晴 ✓ | 4/11=36%
+[2026-05-30 13:20] jpl-1obs: 阴 (共识1/1) | 阴
+[2026-05-30 13:20] jpl-1obs 验证: 阴 vs 晴 ✗ | 19/29=66%
+[2026-05-30 13:25] jpl-5obs: 雨 (共识5/5) | 雨 雨 雨 雨 雨
+[2026-05-30 13:25] jpl-5obs 验证: 雨 vs 晴 ✗ | 15/30=50%
+[2026-05-30 13:30] jpl_up-5obs: 雨 (共识5/5) | 雨 雨 雨 雨 雨
+[2026-05-30 13:30] jpl_up-5obs 验证: 雨 vs 晴 ✗ | 18/30=60%
+[2026-05-30 13:35] jpl_up-1obs: 阴 (共识1/1) | 阴
+[2026-05-30 13:35] jpl_up-1obs 验证: 阴 vs 晴 ✗ | 17/30=57%
