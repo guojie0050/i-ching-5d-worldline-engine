@@ -173,3 +173,14 @@ CC BY 4.0 — Thoughts should flow freely.
 
 - **Strubbe crystallizing spacetime**: [arXiv:2505.10383](https://arxiv.org/abs/2505.10383)
 - **Full paper manuscript**: [`paper/draft.md`](paper/draft.md)
+
+
+## Real-Time Oracle System
+
+12 parallel oracle variants run hourly, comparing 3 random sources (weather encoding / JPL planetary / quantum entropy) × 4 modes (single / 5-observer × original / upgraded).
+
+```bash
+python3 check_oracles.py
+```
+
+Data: `oracles/data_*/verify_log.json`. Architecture: `oracles/runner.py`.
