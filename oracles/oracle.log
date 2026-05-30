@@ -853,3 +853,46 @@ urllib.error.HTTPError: HTTP Error 502: Bad Gateway
 [2026-05-30 13:30] jpl_up-5obs 验证: 雨 vs 晴 ✗ | 18/30=60%
 [2026-05-30 13:35] jpl_up-1obs: 阴 (共识1/1) | 阴
 [2026-05-30 13:35] jpl_up-1obs 验证: 阴 vs 晴 ✗ | 17/30=57%
+[2026-05-30 13:40] entropy-1obs: 阴 (共识1/1) | 阴
+[2026-05-30 13:40] entropy-1obs 验证: 阴 vs 晴 ✗ | 18/29=62%
+[2026-05-30 13:45] entropy-5obs: 晴 (共识4/5) | 晴 晴 晴 晴 阴
+[2026-05-30 13:45] entropy-5obs 验证: 晴 vs 晴 ✓ | 16/27=59%
+[2026-05-30 13:50] entropy_up-5obs: 晴 (共识4/5) | 晴 晴 晴 晴 雨
+[2026-05-30 13:50] entropy_up-5obs 验证: 晴 vs 晴 ✓ | 18/28=64%
+[2026-05-30 13:55] entropy_up-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 13:55] entropy_up-1obs 验证: 晴 vs 晴 ✓ | 17/28=61%
+Traceback (most recent call last):
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 152, in <module>
+    seed,aux1,aux2=get_seed(source)
+                   ^^^^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 112, in get_seed
+    elif source=='weather':hx,dy=weather_hex();return hx,dy,0
+                                 ^^^^^^^^^^^^^
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 86, in weather_hex
+    c = json.loads(urllib.request.urlopen(url, timeout=5).read())['current']
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 216, in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 525, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/home/guo/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 502: Bad Gateway
+[2026-05-30 14:05] weather-5obs: 晴 (共识2/5) | 晴 阴 雨 晴 雨
+[2026-05-30 14:05] weather-5obs 验证: 晴 vs 晴 ✓ | 1/1=100%
+[2026-05-30 14:10] weather_up-1obs: 晴 (共识1/1) | 晴
+[2026-05-30 14:10] weather_up-1obs 验证: 晴 vs 晴 ✓ | 1/1=100%
+  File "/home/guo/.deepseek/workspace/yijing-bayesian-world-model/oracles/runner.py", line 213
+    json.dump({'wl':wl.tolist(),'da':da.tolist(),'switches':detector.sc if detector else 0},open(sp,'w'))
+IndentationError: unexpected indent

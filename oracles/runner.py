@@ -148,6 +148,35 @@ if os.path.exists(sp):s=json.load(open(sp));wl=np.array(s.get('wl',wl.tolist()))
 now=datetime.now();ts=now.strftime('%Y-%m-%d %H:%M');mo=now.month
 label=f"{source}{'_up' if upgraded else ''}-{n_obs}obs"
 
+# ── 验证上轮预测 (先读取旧last_pred, 再覆盖新预测) ──
+vp=os.path.join(DATA_DIR,'verify_log.json')
+old_pred_path=os.path.join(DATA_DIR,'last_pred.json')
+if os.path.exists(old_pred_path):
+    pv=json.load(open(old_pred_path))
+    # Only verify if the prediction is from a PREVIOUS hour (not just-created)
+    pred_time = datetime.strptime(pv['time'], '%Y-%m-%d %H:%M')
+    if pred_time < now:
+        aw=get_weather();an=W3[aw]
+        pc=(pv['prediction']==an)
+        for oi in range(N_OBS):
+            # Reconstruct hexagram from saved prediction context
+            if source in ('date','weather'): hi2=pv.get('hex_idx',seed);dy2=pv.get('dongyao',0)%6
+            else: hi2,_=cast_hex(jpl_seed(pv.get('jpl_lon',234.5),pv.get('jpl_lon',78.9)));hi2%=64;dy2=0
+            oc=(pv['preds'][oi]==W3[aw] if 'preds' in pv else False)
+            if not isinstance(oc, bool): oc=(pv['preds'][oi]==aw)
+            cts[oi,hi2%64,aw]+=1.0;tw=0 if aw==0 else (1 if aw==1 else 2)
+            if tw<3:wl[oi][tw]*=1.5 if oc else 0.8;wl[oi]/=wl[oi].sum()
+            if upgraded:
+                for di in range(3):da[oi][di]=0.95*da[oi][di]+0.05*(1.0 if oc else 0.0)
+        vl=json.load(open(vp)) if os.path.exists(vp) else[]
+        vl.append({'time':ts,'prediction':pv['prediction'],'actual':an,'correct':pc,'label':label})
+        json.dump(vl[-1000:],open(vp,'w'),ensure_ascii=False)
+        c=sum(1 for v in vl if v['correct']);t=len(vl)
+        print(f"[{ts}] {label} 验证: {pv['prediction']} vs {an} {'✓' if pc else '✗'} | {c}/{t}={c/max(t,1):.0%}")
+    else:
+        # 首次运行, 无旧预测可验证
+        pass
+
 # ── 预测 (同卦: 所有卦师同一卦象, 仅世界线不同) ──
 seed,aux1,aux2=get_seed(source)
 if source in ('date','weather'):hi,dy=seed,aux2%6
@@ -181,21 +210,4 @@ print(f"[{ts}] {label}: {cn} (共识{vc[cs]}/{N_OBS}) | "+" ".join([W3[x] for x 
 pred_log={'time':ts,'prediction':cn,'preds':preds,'consensus':vc[cs],'label':label}
 json.dump(pred_log,open(os.path.join(DATA_DIR,'last_pred.json'),'w'))
 
-# ── 验证 ──
-vp=os.path.join(DATA_DIR,'verify_log.json')
-if os.path.exists(os.path.join(DATA_DIR,'last_pred.json')):
-    pv=json.load(open(os.path.join(DATA_DIR,'last_pred.json')))
-    aw=get_weather();an=W3[aw]
-    pc=(pv['prediction']==an)
-    for oi in range(N_OBS):
-        oc=(pv['preds'][oi]==(1 if ic(aw) else 0))
-        cts[oi,hi,aw]+=1.0;tw=0 if ic(aw) else 1
-        wl[oi][tw]*=1.5 if oc else 0.8;wl[oi]/=wl[oi].sum()
-        if upgraded:
-            for di in range(3):da[oi][di]=0.95*da[oi][di]+0.05*(1.0 if oc else 0.0)
-    vl=json.load(open(vp)) if os.path.exists(vp) else[]
-    vl.append({'time':ts,'prediction':pv['prediction'],'actual':an,'correct':pc,'label':label})
-    json.dump(vl[-1000:],open(vp,'w'),ensure_ascii=False)
-    c=sum(1 for v in vl if v['correct']);t=len(vl)
-    print(f"[{ts}] {label} 验证: {pv['prediction']} vs {an} {'✓' if pc else '✗'} | {c}/{t}={c/max(t,1):.0%}")
     json.dump({'wl':wl.tolist(),'da':da.tolist(),'switches':detector.sc if detector else 0},open(sp,'w'))
