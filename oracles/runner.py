@@ -10,6 +10,7 @@
 import sys, os, json, hashlib, time, numpy as np
 from datetime import datetime
 from collections import Counter
+W3=["晴","阴","雨"]
 
 # ═══════════════ 参数解析 ═══════════════
 args = {k:v for k,v in zip(sys.argv[1::2], sys.argv[2::2])}
@@ -160,7 +161,7 @@ if os.path.exists(old_pred_path):
         pc=(pv['prediction']==an)
         for oi in range(N_OBS):
             # Reconstruct hexagram from saved prediction context
-            if source in ('date','weather'): hi2=pv.get('hex_idx',seed);dy2=pv.get('dongyao',0)%6
+            if source in ('date','weather'): hi2=pv.get('hex_idx',0);dy2=pv.get('dongyao',0)%6
             else: hi2,_=cast_hex(jpl_seed(pv.get('jpl_lon',234.5),pv.get('jpl_lon',78.9)));hi2%=64;dy2=0
             oc=(pv['preds'][oi]==W3[aw] if 'preds' in pv else False)
             if not isinstance(oc, bool): oc=(pv['preds'][oi]==aw)
@@ -203,11 +204,10 @@ if upgraded and detector and detector.check(likes):
     print(f"[{ts}] ⚡ {label}: 世界线切换检测触发 (第{detector.sc}次)")
 
 vc=Counter(preds);cs=vc.most_common(1)[0][0]
-W3=["晴","阴","雨"]
 cn=W3[cs]
 print(f"[{ts}] {label}: {cn} (共识{vc[cs]}/{N_OBS}) | "+" ".join([W3[x] for x in preds]))
 
 pred_log={'time':ts,'prediction':cn,'preds':preds,'consensus':vc[cs],'label':label}
 json.dump(pred_log,open(os.path.join(DATA_DIR,'last_pred.json'),'w'))
 
-    json.dump({'wl':wl.tolist(),'da':da.tolist(),'switches':detector.sc if detector else 0},open(sp,'w'))
+json.dump({'wl':wl.tolist(),'da':da.tolist(),'switches':detector.sc if detector else 0},open(sp,'w'))
